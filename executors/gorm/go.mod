@@ -3,7 +3,7 @@ module github.com/hadi77ir/go-query/executors/gorm
 go 1.24.0
 
 require (
-	github.com/hadi77ir/go-query v0.0.0
+	github.com/hadi77ir/go-query v1.0.0
 	github.com/stretchr/testify v1.8.4
 	gorm.io/driver/sqlite v1.6.0
 	gorm.io/gorm v1.31.0
