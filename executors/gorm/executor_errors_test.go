@@ -17,7 +17,7 @@ func TestGORMExecutor_ErrorHandling(t *testing.T) {
 
 	opts := query.DefaultExecutorOptions()
 	opts.DefaultSortField = "id"
-	executor := NewExecutor(db, &Product{}, opts)
+	executor := NewExecutor(db.Model(&Product{}), opts)
 	ctx := context.Background()
 
 	t.Run("ErrNoRecordsFound - empty result", func(t *testing.T) {
@@ -64,7 +64,7 @@ func TestGORMExecutor_ErrorHandling(t *testing.T) {
 		opts := query.DefaultExecutorOptions()
 		opts.DefaultSortField = "id"
 		opts.AllowedFields = []string{"name", "price"}
-		restrictedExecutor := NewExecutor(db, &Product{}, opts)
+		restrictedExecutor := NewExecutor(db.Model(&Product{}), opts)
 
 		q := &query.Query{
 			Filter: &query.ComparisonNode{
@@ -91,7 +91,7 @@ func TestGORMExecutor_ErrorHandling(t *testing.T) {
 		opts := query.DefaultExecutorOptions()
 		opts.DefaultSortField = "id"
 		opts.DisableRegex = true
-		restrictedExecutor := NewExecutor(db, &Product{}, opts)
+		restrictedExecutor := NewExecutor(db.Model(&Product{}), opts)
 
 		p, _ := parser.NewParser(`name REGEX "pattern"`)
 		q, _ := p.Parse()
@@ -108,7 +108,7 @@ func TestGORMExecutor_ErrorHandling(t *testing.T) {
 		opts := query.DefaultExecutorOptions()
 		opts.DefaultSortField = "id"
 		opts.AllowRandomOrder = false
-		restrictedExecutor := NewExecutor(db, &Product{}, opts)
+		restrictedExecutor := NewExecutor(db.Model(&Product{}), opts)
 
 		p, _ := parser.NewParser("sort_order = random")
 		q, _ := p.Parse()
@@ -174,7 +174,7 @@ func TestGORMExecutor_ErrorWrapping(t *testing.T) {
 
 	opts := query.DefaultExecutorOptions()
 	opts.DefaultSortField = "id"
-	executor := NewExecutor(db, &Product{}, opts)
+	executor := NewExecutor(db.Model(&Product{}), opts)
 	ctx := context.Background()
 
 	t.Run("ExecutionError wraps database errors", func(t *testing.T) {

@@ -21,13 +21,12 @@ type Executor struct {
 
 // NewExecutor creates a new GORM executor
 // model should be a pointer to the model struct, e.g. &User{}
-func NewExecutor(db *gorm.DB, model interface{}, opts *query.ExecutorOptions) executor.Executor {
+func NewExecutor(db *gorm.DB, opts *query.ExecutorOptions) executor.Executor {
 	if opts == nil {
 		opts = query.DefaultExecutorOptions()
 	}
 	return &Executor{
 		db:      db,
-		model:   model,
 		options: opts,
 	}
 }
@@ -51,7 +50,7 @@ func (e *Executor) Execute(ctx context.Context, q *query.Query, dest interface{}
 	pageSize := e.options.ValidatePageSize(q.PageSize)
 
 	// Build base query
-	tx := e.db.WithContext(ctx).Model(e.model)
+	tx := e.db.WithContext(ctx)
 
 	// Build WHERE clause from filter
 	if q.Filter != nil {

@@ -75,7 +75,7 @@ func TestGORMExecutor_BasicComparisons(t *testing.T) {
 
 	opts := query.DefaultExecutorOptions()
 	opts.DefaultSortField = "id" // SQL uses 'id' not '_id'
-	executor := NewExecutor(db, &Product{}, opts)
+	executor := NewExecutor(db.Model(&Product{}), opts)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -151,7 +151,7 @@ func TestGORMExecutor_StringMatching(t *testing.T) {
 
 	opts := query.DefaultExecutorOptions()
 	opts.DefaultSortField = "id" // SQL uses 'id' not '_id'
-	executor := NewExecutor(db, &Product{}, opts)
+	executor := NewExecutor(db.Model(&Product{}), opts)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -221,7 +221,7 @@ func TestGORMExecutor_ArrayOperations(t *testing.T) {
 
 	opts := query.DefaultExecutorOptions()
 	opts.DefaultSortField = "id" // SQL uses 'id' not '_id'
-	executor := NewExecutor(db, &Product{}, opts)
+	executor := NewExecutor(db.Model(&Product{}), opts)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -272,7 +272,7 @@ func TestGORMExecutor_LogicalOperators(t *testing.T) {
 
 	opts := query.DefaultExecutorOptions()
 	opts.DefaultSortField = "id" // SQL uses 'id' not '_id'
-	executor := NewExecutor(db, &Product{}, opts)
+	executor := NewExecutor(db.Model(&Product{}), opts)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -329,7 +329,7 @@ func TestGORMExecutor_BareSearch(t *testing.T) {
 	opts := query.DefaultExecutorOptions()
 	opts.DefaultSearchField = "name"
 	opts.DefaultSortField = "id" // SQL uses 'id' not '_id'
-	executor := NewExecutor(db, &Product{}, opts)
+	executor := NewExecutor(db.Model(&Product{}), opts)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -385,7 +385,7 @@ func TestGORMExecutor_Pagination(t *testing.T) {
 
 	opts := query.DefaultExecutorOptions()
 	opts.DefaultSortField = "id" // SQL uses 'id' not '_id'
-	executor := NewExecutor(db, &Product{}, opts)
+	executor := NewExecutor(db.Model(&Product{}), opts)
 	ctx := context.Background()
 
 	t.Run("first page", func(t *testing.T) {
@@ -476,7 +476,7 @@ func TestGORMExecutor_Sorting(t *testing.T) {
 
 	opts := query.DefaultExecutorOptions()
 	opts.DefaultSortField = "id" // SQL uses 'id' not '_id'
-	executor := NewExecutor(db, &Product{}, opts)
+	executor := NewExecutor(db.Model(&Product{}), opts)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -545,7 +545,7 @@ func TestGORMExecutor_CustomIDField(t *testing.T) {
 	// For this test, we'll use the existing Product model but configure the executor
 	// to use "product_id" as the ID field name. This tests that the executor
 	// correctly uses the custom ID field name for cursor pagination.
-	executor := NewExecutor(db, &Product{}, opts)
+	executor := NewExecutor(db.Model(&Product{}), opts)
 	ctx := context.Background()
 
 	// Test pagination with custom ID field name
@@ -574,7 +574,7 @@ func TestGORMExecutor_EdgeCases(t *testing.T) {
 
 	opts := query.DefaultExecutorOptions()
 	opts.DefaultSortField = "id" // SQL uses 'id' not '_id'
-	executor := NewExecutor(db, &Product{}, opts)
+	executor := NewExecutor(db.Model(&Product{}), opts)
 	ctx := context.Background()
 
 	t.Run("empty results", func(t *testing.T) {
@@ -666,7 +666,7 @@ func TestGORMExecutor_ComplexRealWorld(t *testing.T) {
 
 	opts := query.DefaultExecutorOptions()
 	opts.DefaultSortField = "id" // SQL uses 'id' not '_id'
-	executor := NewExecutor(db, &Product{}, opts)
+	executor := NewExecutor(db.Model(&Product{}), opts)
 	ctx := context.Background()
 
 	t.Run("e-commerce search", func(t *testing.T) {

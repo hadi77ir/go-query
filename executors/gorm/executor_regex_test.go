@@ -19,7 +19,7 @@ func TestGORMExecutor_RegexDisabled(t *testing.T) {
 	opts := query.DefaultExecutorOptions()
 	opts.DisableRegex = true
 	opts.DefaultSortField = "id" // SQL uses 'id' not '_id'
-	executor := NewExecutor(db, &Product{}, opts)
+	executor := NewExecutor(db.Model(&Product{}), opts)
 	ctx := context.Background()
 
 	t.Run("regex returns clear error", func(t *testing.T) {

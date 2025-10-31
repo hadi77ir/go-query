@@ -19,7 +19,7 @@ func TestGORMExecutor_SQLInjectionProtection(t *testing.T) {
 
 	opts := query.DefaultExecutorOptions()
 	opts.DefaultSortField = "id"
-	executor := NewExecutor(db, &Product{}, opts)
+	executor := NewExecutor(db.Model(&Product{}), opts)
 	ctx := context.Background()
 
 	t.Run("field values are parameterized - safe from injection", func(t *testing.T) {
@@ -312,7 +312,7 @@ func TestGORMExecutor_AllowedFieldsAdditionalSecurity(t *testing.T) {
 	opts := query.DefaultExecutorOptions()
 	opts.DefaultSortField = "id"
 	opts.AllowedFields = []string{"name", "price", "category"} // Limited set
-	executor := NewExecutor(db, &Product{}, opts)
+	executor := NewExecutor(db.Model(&Product{}), opts)
 	ctx := context.Background()
 
 	t.Run("allowed field works", func(t *testing.T) {

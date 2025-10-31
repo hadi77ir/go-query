@@ -58,7 +58,7 @@ func TestGORMExecutor_CursorPaginationLargeDataset(t *testing.T) {
 	opts.DefaultSortField = "id"
 	opts.DefaultPageSize = 20
 	opts.MaxPageSize = 100
-	executor := NewExecutor(db, &Product{}, opts)
+	executor := NewExecutor(db.Model(&Product{}), opts)
 	ctx := context.Background()
 
 	t.Run("forward pagination through all pages", func(t *testing.T) {
