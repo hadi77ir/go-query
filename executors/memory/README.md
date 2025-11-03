@@ -17,7 +17,7 @@ An in-memory executor for go-query that allows you to filter and query Go slices
 ## Installation
 
 ```bash
-go get github.com/hadi77ir/go-query/executors/memory
+go get github.com/hadi77ir/go-query/v2/executors/memory
 ```
 
 ## Quick Start
@@ -31,9 +31,9 @@ import (
     "context"
     "fmt"
     
-    "github.com/hadi77ir/go-query/executors/memory"
-    "github.com/hadi77ir/go-query/parser"
-    "github.com/hadi77ir/go-query/query"
+    "github.com/hadi77ir/go-query/v2/executors/memory"
+    "github.com/hadi77ir/go-query/v2/parser"
+    "github.com/hadi77ir/go-query/v2/query"
 )
 
 type Product struct {
@@ -85,7 +85,11 @@ cache := parser.NewParserCache(100)
 q, _ := cache.Parse("active = true and price > 15")
 
 var results []map[string]interface{}
-executor.Execute(context.Background(), q, &results)
+executor.Execute(context.Background(), q, "", &results)
+
+// Get count
+count, _ := executor.Count(context.Background(), q)
+fmt.Printf("Found %d matching items\n", count)
 ```
 
 ## Use Cases
@@ -232,18 +236,16 @@ Full cursor-based pagination:
 cache := parser.NewParserCache(100)
 q, _ := cache.Parse("page_size = 10 sort_by = price")
 
-var page1 []Product
-result1, _ := executor.Execute(ctx, q, &page1)
+    var page1 []Product
+    result1, _ := executor.Execute(ctx, q, "", &page1)
 
 // Next page
-q.Cursor = result1.NextPageCursor
 var page2 []Product
-result2, _ := executor.Execute(ctx, q, &page2)
+result2, _ := executor.Execute(ctx, q, result1.NextPageCursor, &page2)
 
 // Previous page
-q.Cursor = result2.PrevPageCursor
 var prevPage []Product
-executor.Execute(ctx, q, &prevPage)
+executor.Execute(ctx, q, result2.PrevPageCursor, &prevPage)
 ```
 
 ### Sorting
@@ -293,9 +295,9 @@ import (
     "encoding/json"
     "net/http"
     
-    "github.com/hadi77ir/go-query/executors/memory"
-    "github.com/hadi77ir/go-query/parser"
-    "github.com/hadi77ir/go-query/query"
+    "github.com/hadi77ir/go-query/v2/executors/memory"
+    "github.com/hadi77ir/go-query/v2/parser"
+    "github.com/hadi77ir/go-query/v2/query"
 )
 
 type Product struct {
@@ -338,7 +340,7 @@ func searchProducts(w http.ResponseWriter, r *http.Request) {
     executor := memory.NewExecutor(products, query.DefaultExecutorOptions())
     
     var results []Product
-    result, err := executor.Execute(r.Context(), q, &results)
+    result, err := executor.Execute(r.Context(), q, "", &results)
     if err != nil {
         http.Error(w, "Query execution failed", http.StatusInternalServerError)
         return

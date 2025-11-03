@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hadi77ir/go-query/parser"
-	"github.com/hadi77ir/go-query/query"
+	"github.com/hadi77ir/go-query/v2/parser"
+	"github.com/hadi77ir/go-query/v2/query"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/driver/sqlite"
@@ -133,7 +133,7 @@ func TestGORMExecutor_BasicComparisons(t *testing.T) {
 			require.NoError(t, err)
 
 			var products []Product
-			result, err := executor.Execute(ctx, q, &products)
+			result, err := executor.Execute(ctx, q, "", &products)
 			require.NoError(t, err)
 			assert.Equal(t, tt.expectedCount, len(products))
 			assert.Equal(t, int64(tt.expectedCount), result.TotalItems)
@@ -207,7 +207,7 @@ func TestGORMExecutor_StringMatching(t *testing.T) {
 			require.NoError(t, err)
 
 			var products []Product
-			result, err := executor.Execute(ctx, q, &products)
+			result, err := executor.Execute(ctx, q, "", &products)
 			require.NoError(t, err)
 			assert.Equal(t, tt.expectedCount, len(products), "Query: %s", tt.query)
 			assert.Equal(t, int64(tt.expectedCount), result.TotalItems)
@@ -259,7 +259,7 @@ func TestGORMExecutor_ArrayOperations(t *testing.T) {
 			require.NoError(t, err)
 
 			var products []Product
-			_, err = executor.Execute(ctx, q, &products)
+			_, err = executor.Execute(ctx, q, "", &products)
 			require.NoError(t, err)
 			assert.Equal(t, tt.expectedCount, len(products))
 		})
@@ -315,7 +315,7 @@ func TestGORMExecutor_LogicalOperators(t *testing.T) {
 			require.NoError(t, err)
 
 			var products []Product
-			_, err = executor.Execute(ctx, q, &products)
+			_, err = executor.Execute(ctx, q, "", &products)
 			require.NoError(t, err)
 			assert.Equal(t, tt.expectedCount, len(products), "Query: %s", tt.query)
 		})
@@ -372,7 +372,7 @@ func TestGORMExecutor_BareSearch(t *testing.T) {
 			require.NoError(t, err)
 
 			var products []Product
-			_, err = executor.Execute(ctx, q, &products)
+			_, err = executor.Execute(ctx, q, "", &products)
 			require.NoError(t, err)
 			assert.Equal(t, tt.expectedCount, len(products), "Query: %s", tt.query)
 		})
@@ -393,7 +393,7 @@ func TestGORMExecutor_Pagination(t *testing.T) {
 		q, _ := p.Parse()
 
 		var products []Product
-		result, err := executor.Execute(ctx, q, &products)
+		result, err := executor.Execute(ctx, q, "", &products)
 		require.NoError(t, err)
 
 		assert.Equal(t, 3, len(products))
@@ -410,12 +410,11 @@ func TestGORMExecutor_Pagination(t *testing.T) {
 		p, _ := parser.NewParser("page_size = 3 sort_by = id")
 		q, _ := p.Parse()
 		var products1 []Product
-		result1, _ := executor.Execute(ctx, q, &products1)
+		result1, _ := executor.Execute(ctx, q, "", &products1)
 
 		// Get second page
-		q.Cursor = result1.NextPageCursor
 		var products2 []Product
-		result2, err := executor.Execute(ctx, q, &products2)
+		result2, err := executor.Execute(ctx, q, result1.NextPageCursor, &products2)
 		require.NoError(t, err)
 
 		assert.Equal(t, 3, len(products2))
@@ -433,12 +432,11 @@ func TestGORMExecutor_Pagination(t *testing.T) {
 
 		// Navigate to last page
 		var products []Product
-		result, _ := executor.Execute(ctx, q, &products)
+		result, _ := executor.Execute(ctx, q, "", &products)
 
 		for result.NextPageCursor != "" {
-			q.Cursor = result.NextPageCursor
 			products = []Product{}
-			result, _ = executor.Execute(ctx, q, &products)
+			result, _ = executor.Execute(ctx, q, result.NextPageCursor, &products)
 		}
 
 		assert.Equal(t, 1, len(products))      // Last page has 1 item
@@ -454,14 +452,12 @@ func TestGORMExecutor_Pagination(t *testing.T) {
 		p, _ := parser.NewParser("page_size = 3 sort_by = id")
 		q, _ := p.Parse()
 		var products []Product
-		result, _ := executor.Execute(ctx, q, &products)
-		q.Cursor = result.NextPageCursor
-		result, _ = executor.Execute(ctx, q, &products)
+		result, _ := executor.Execute(ctx, q, "", &products)
+		result, _ = executor.Execute(ctx, q, result.NextPageCursor, &products)
 
 		// Go back to page 1
-		q.Cursor = result.PrevPageCursor
 		products = []Product{}
-		prevResult, err := executor.Execute(ctx, q, &products)
+		prevResult, err := executor.Execute(ctx, q, result.PrevPageCursor, &products)
 		require.NoError(t, err)
 
 		assert.Equal(t, 3, len(products))
@@ -523,7 +519,7 @@ func TestGORMExecutor_Sorting(t *testing.T) {
 			q, _ := p.Parse()
 
 			var products []Product
-			_, err := executor.Execute(ctx, q, &products)
+			_, err := executor.Execute(ctx, q, "", &products)
 			require.NoError(t, err)
 
 			if tt.checkOrder != nil && len(products) >= 2 {
@@ -553,7 +549,7 @@ func TestGORMExecutor_CustomIDField(t *testing.T) {
 	q, _ := p.Parse()
 
 	var products []Product
-	result, err := executor.Execute(ctx, q, &products)
+	result, err := executor.Execute(ctx, q, "", &products)
 	require.NoError(t, err)
 	assert.Equal(t, 3, len(products))
 	assert.NotEmpty(t, result.NextPageCursor)
@@ -561,9 +557,8 @@ func TestGORMExecutor_CustomIDField(t *testing.T) {
 	// Verify that cursors are generated correctly with custom ID field
 	// The actual ID extraction should work since we're using the same model
 	// but just testing that the field name configuration is respected
-	q.Cursor = result.NextPageCursor
 	products = []Product{}
-	_, err = executor.Execute(ctx, q, &products)
+	_, err = executor.Execute(ctx, q, result.NextPageCursor, &products)
 	require.NoError(t, err)
 	assert.Equal(t, 3, len(products))
 }
@@ -582,7 +577,7 @@ func TestGORMExecutor_EdgeCases(t *testing.T) {
 		q, _ := p.Parse()
 
 		var products []Product
-		result, err := executor.Execute(ctx, q, &products)
+		result, err := executor.Execute(ctx, q, "", &products)
 		require.Error(t, err, query.ErrNoRecordsFound)
 		assert.Equal(t, 0, len(products))
 		assert.Equal(t, int64(0), result.TotalItems)
@@ -594,7 +589,7 @@ func TestGORMExecutor_EdgeCases(t *testing.T) {
 		q, _ := p.Parse()
 
 		var products []Product
-		result, err := executor.Execute(ctx, q, &products)
+		result, err := executor.Execute(ctx, q, "", &products)
 		require.NoError(t, err)
 		assert.Equal(t, 10, len(products))
 		assert.Equal(t, int64(10), result.TotalItems)
@@ -605,7 +600,7 @@ func TestGORMExecutor_EdgeCases(t *testing.T) {
 		q, _ := p.Parse()
 
 		var products []Product
-		_, err := executor.Execute(ctx, q, &products)
+		_, err := executor.Execute(ctx, q, "", &products)
 		require.NoError(t, err)
 		// Should be capped at MaxPageSize (100 by default)
 		assert.LessOrEqual(t, len(products), 100)
@@ -616,7 +611,7 @@ func TestGORMExecutor_EdgeCases(t *testing.T) {
 		q, _ := p.Parse()
 
 		var products []Product
-		_, err := executor.Execute(ctx, q, &products)
+		_, err := executor.Execute(ctx, q, "", &products)
 		// GORM will error on invalid field names (expected behavior)
 		// This is actually good - it catches typos
 		if err != nil {
@@ -635,7 +630,7 @@ func TestGORMExecutor_EdgeCases(t *testing.T) {
 		q, _ := p.Parse()
 
 		var products []Product
-		_, err := executor.Execute(ctx, q, &products)
+		_, err := executor.Execute(ctx, q, "", &products)
 		require.NoError(t, err)
 		assert.Equal(t, 1, len(products))
 	})
@@ -651,7 +646,7 @@ func TestGORMExecutor_EdgeCases(t *testing.T) {
 		q, _ := p.Parse()
 
 		var products []Product
-		_, err := executor.Execute(ctx, q, &products)
+		_, err := executor.Execute(ctx, q, "", &products)
 		require.NoError(t, err)
 		assert.Greater(t, len(products), 0)
 		for _, p := range products {
@@ -678,7 +673,7 @@ func TestGORMExecutor_ComplexRealWorld(t *testing.T) {
 		q, _ := p.Parse()
 
 		var products []Product
-		_, err := executor.Execute(ctx, q, &products)
+		_, err := executor.Execute(ctx, q, "", &products)
 		require.NoError(t, err)
 		assert.Greater(t, len(products), 0)
 	})
@@ -692,7 +687,7 @@ func TestGORMExecutor_ComplexRealWorld(t *testing.T) {
 		q, _ := p.Parse()
 
 		var products []Product
-		_, err := executor.Execute(ctx, q, &products)
+		_, err := executor.Execute(ctx, q, "", &products)
 		require.NoError(t, err)
 		assert.Greater(t, len(products), 0)
 
@@ -713,7 +708,7 @@ func TestGORMExecutor_ComplexRealWorld(t *testing.T) {
 		q, _ := p.Parse()
 
 		var products []Product
-		_, err := executor.Execute(ctx, q, &products)
+		_, err := executor.Execute(ctx, q, "", &products)
 		require.NoError(t, err)
 
 		for _, product := range products {

@@ -6,9 +6,9 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/hadi77ir/go-query/executor"
-	"github.com/hadi77ir/go-query/internal/cursor"
-	"github.com/hadi77ir/go-query/query"
+	"github.com/hadi77ir/go-query/v2/executor"
+	"github.com/hadi77ir/go-query/v2/internal/cursor"
+	"github.com/hadi77ir/go-query/v2/query"
 	"gorm.io/gorm"
 )
 
@@ -43,7 +43,7 @@ func (e *Executor) Close() error {
 
 // Execute runs the query and stores results in dest
 // dest must be a pointer to a slice (e.g., &[]User{})
-func (e *Executor) Execute(ctx context.Context, q *query.Query, dest interface{}) (*query.Result, error) {
+func (e *Executor) Execute(ctx context.Context, q *query.Query, cursorParam string, dest interface{}) (*query.Result, error) {
 	result := &query.Result{}
 
 	// Validate and adjust page size
@@ -73,7 +73,7 @@ func (e *Executor) Execute(ctx context.Context, q *query.Query, dest interface{}
 	result.TotalItems = totalItems
 
 	// Handle cursor-based pagination
-	cursorData, err := cursor.Decode(q.Cursor)
+	cursorData, err := cursor.Decode(cursorParam)
 	if err != nil {
 		result.Error = fmt.Errorf("%w: %v", query.ErrInvalidCursor, err)
 		return result, result.Error
@@ -553,4 +553,30 @@ func (e *Executor) buildCursorFilter(cursorData *cursor.CursorData, sortField st
 
 	return fmt.Sprintf("(%s < ? OR (%s = ? AND %s < ?))", sortField, sortField, idFieldName),
 		[]interface{}{cursorData.LastSortValue, cursorData.LastSortValue, cursorData.LastID}
+}
+
+// Count returns the total number of items that would be returned by the given query
+// This does not apply pagination - it counts all matching items
+func (e *Executor) Count(ctx context.Context, q *query.Query) (int64, error) {
+	// Build base query
+	tx := e.db.WithContext(ctx)
+
+	// Build WHERE clause from filter
+	if q.Filter != nil {
+		whereClauses, args, err := e.buildFilter(q.Filter)
+		if err != nil {
+			return 0, err
+		}
+		if whereClauses != "" {
+			tx = tx.Where(whereClauses, args...)
+		}
+	}
+
+	// Count total items
+	var totalItems int64
+	if err := tx.Count(&totalItems).Error; err != nil {
+		return 0, query.NewExecutionError("count items", err)
+	}
+
+	return totalItems, nil
 }

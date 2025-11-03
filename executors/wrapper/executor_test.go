@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/hadi77ir/go-query/executors/memory"
-	"github.com/hadi77ir/go-query/parser"
-	"github.com/hadi77ir/go-query/query"
+	"github.com/hadi77ir/go-query/v2/executors/memory"
+	"github.com/hadi77ir/go-query/v2/parser"
+	"github.com/hadi77ir/go-query/v2/query"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -50,7 +50,7 @@ func TestWrapperExecutor_BasicFunctionality(t *testing.T) {
 		require.NoError(t, err)
 
 		var users []User
-		result, err := wrapperExecutor.Execute(ctx, q, &users)
+		result, err := wrapperExecutor.Execute(ctx, q, "", &users)
 		require.NoError(t, err)
 		assert.Equal(t, int64(1), result.TotalItems)
 		assert.Equal(t, 1, result.ItemsReturned)
@@ -64,7 +64,7 @@ func TestWrapperExecutor_BasicFunctionality(t *testing.T) {
 		require.NoError(t, err)
 
 		var users []User
-		_, err = wrapperExecutor.Execute(ctx, q, &users)
+		_, err = wrapperExecutor.Execute(ctx, q, "", &users)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "field 'id': field not allowed")
 	})
@@ -76,7 +76,7 @@ func TestWrapperExecutor_BasicFunctionality(t *testing.T) {
 		require.NoError(t, err)
 
 		var users []User
-		_, err = wrapperExecutor.Execute(ctx, q, &users)
+		_, err = wrapperExecutor.Execute(ctx, q, "", &users)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "field 'password': field not allowed")
 	})
@@ -91,7 +91,7 @@ func TestWrapperExecutor_BasicFunctionality(t *testing.T) {
 		require.NoError(t, err)
 
 		var users []User
-		_, err = wrapperWithPassword.Execute(ctx, q, &users)
+		_, err = wrapperWithPassword.Execute(ctx, q, "", &users)
 		require.Error(t, err)
 		// Inner executor will reject it because password is not in inner executor's allowed list
 		assert.Contains(t, err.Error(), "field not allowed")
@@ -118,7 +118,7 @@ func TestWrapperExecutor_EmptyAllowedFields(t *testing.T) {
 		require.NoError(t, err)
 
 		var users []User
-		result, err := wrapperExecutor.Execute(ctx, q, &users)
+		result, err := wrapperExecutor.Execute(ctx, q, "", &users)
 		require.NoError(t, err)
 		assert.Equal(t, int64(1), result.TotalItems)
 	})
@@ -130,7 +130,7 @@ func TestWrapperExecutor_EmptyAllowedFields(t *testing.T) {
 		require.NoError(t, err)
 
 		var users []User
-		_, err = wrapperExecutor.Execute(ctx, q, &users)
+		_, err = wrapperExecutor.Execute(ctx, q, "", &users)
 		require.Error(t, err)
 		// Inner executor will reject it
 		assert.Contains(t, err.Error(), "field not allowed")
@@ -156,7 +156,7 @@ func TestWrapperExecutor_SortFieldRestriction(t *testing.T) {
 		q.SortBy = "name"
 
 		var users []User
-		result, err := wrapperExecutor.Execute(ctx, q, &users)
+		result, err := wrapperExecutor.Execute(ctx, q, "", &users)
 		require.NoError(t, err)
 		assert.Equal(t, int64(1), result.TotalItems)
 	})
@@ -169,7 +169,7 @@ func TestWrapperExecutor_SortFieldRestriction(t *testing.T) {
 		q.SortBy = "balance"
 
 		var users []User
-		_, err = wrapperExecutor.Execute(ctx, q, &users)
+		_, err = wrapperExecutor.Execute(ctx, q, "", &users)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "field 'balance': field not allowed")
 	})
@@ -193,7 +193,7 @@ func TestWrapperExecutor_ComplexFilters(t *testing.T) {
 		require.NoError(t, err)
 
 		var users []User
-		result, err := wrapperExecutor.Execute(ctx, q, &users)
+		result, err := wrapperExecutor.Execute(ctx, q, "", &users)
 		require.NoError(t, err)
 		assert.Equal(t, int64(1), result.TotalItems)
 	})
@@ -205,7 +205,7 @@ func TestWrapperExecutor_ComplexFilters(t *testing.T) {
 		require.NoError(t, err)
 
 		var users []User
-		_, err = wrapperExecutor.Execute(ctx, q, &users)
+		_, err = wrapperExecutor.Execute(ctx, q, "", &users)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "field 'balance': field not allowed")
 	})
@@ -217,7 +217,7 @@ func TestWrapperExecutor_ComplexFilters(t *testing.T) {
 		require.NoError(t, err)
 
 		var users []User
-		_, err = wrapperExecutor.Execute(ctx, q, &users)
+		_, err = wrapperExecutor.Execute(ctx, q, "", &users)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "field 'balance': field not allowed")
 	})

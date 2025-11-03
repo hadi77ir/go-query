@@ -1,9 +1,9 @@
-module github.com/hadi77ir/go-query/executors/gorm
+module github.com/hadi77ir/go-query/v2/executors/gorm
 
 go 1.24.0
 
 require (
-	github.com/hadi77ir/go-query v1.0.0
+	github.com/hadi77ir/go-query/v2 v2.0.0
 	github.com/stretchr/testify v1.8.4
 	gorm.io/driver/sqlite v1.6.0
 	gorm.io/gorm v1.31.0
@@ -21,4 +21,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/hadi77ir/go-query => ../..
+replace github.com/hadi77ir/go-query/v2 => ../..

@@ -89,10 +89,10 @@ opts.AllowedFields = []string{"id", "name", "email"}
 executor := memory.NewExecutor(users, opts)
 
 // ✅ Works (allowed field)
-result, err := executor.Execute(ctx, parseQuery("name = John"), &results)
+result, err := executor.Execute(ctx, parseQuery("name = John"), "", &results)
 
 // ❌ Fails (password not allowed)
-result, err := executor.Execute(ctx, parseQuery("password = secret"), &results)
+result, err := executor.Execute(ctx, parseQuery("password = secret"), "", &results)
 // Error: field 'password' is not in the allowed fields list
 ```
 
@@ -434,7 +434,7 @@ db.Where("name = ?", userInput).Find(&products)
 // 3. Parameterized queries for values
 // 4. Optional AllowedFields restriction
 // 5. Optional Wrapper Executor for layered restrictions
-executor.Execute(ctx, query, &products)
+executor.Execute(ctx, query, "", &products)
 ```
 
 ## Known Limitations

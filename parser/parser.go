@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hadi77ir/go-query/query"
+	"github.com/hadi77ir/go-query/v2/query"
 )
 
 // Parser parses query strings into Query objects
@@ -437,22 +437,7 @@ func (p *Parser) tryExtractQueryOptionFromField(q *query.Query, key string) (boo
 		}
 		return true, nil
 
-	case "cursor":
-		if err := p.nextToken(); err != nil {
-			return false, err
-		}
-		if p.curTok.Type != TokenOperator || p.curTok.Value != "=" {
-			return false, fmt.Errorf("expected '=' after cursor")
-		}
-		if err := p.nextToken(); err != nil {
-			return false, err
-		}
-		q.Cursor = p.getValue()
-		if err := p.nextToken(); err != nil {
-			return false, err
-		}
-		return true, nil
-
+		// Note: cursor is no longer part of Query - it should be passed separately to Execute
 	}
 
 	return false, nil

@@ -5,7 +5,7 @@ GORM implementation for go-query. Supports PostgreSQL, MySQL, SQLite, SQL Server
 ## Installation
 
 ```bash
-go get github.com/hadi77ir/go-query/executors/gorm
+go get github.com/hadi77ir/go-query/v2/executors/gorm
 ```
 
 You'll also need to install your database driver:
@@ -33,9 +33,9 @@ import (
     "context"
     "log"
     
-    "github.com/hadi77ir/go-query/executors/gorm"
-    "github.com/hadi77ir/go-query/parser"
-    "github.com/hadi77ir/go-query/query"
+    "github.com/hadi77ir/go-query/v2/executors/gorm"
+    "github.com/hadi77ir/go-query/v2/parser"
+    "github.com/hadi77ir/go-query/v2/query"
     gormpkg "gorm.io/gorm"
     "gorm.io/driver/postgres"
 )
@@ -71,15 +71,24 @@ func main() {
     cache := parser.NewParserCache(100)
     q, _ := cache.Parse("status = active and age >= 18")
     
-    result, err := exec.Execute(context.Background(), q)
+    var users []User
+    result, err := exec.Execute(context.Background(), q, "", &users)
     if err != nil {
         log.Fatal(err)
     }
     
     // Use results
-    for _, item := range result.Data {
-        // Process items
+    for _, user := range users {
+        // Process user
+        fmt.Println(user.Name)
     }
+    
+    // Get count separately (optional)
+    count, err := exec.Count(context.Background(), q)
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Printf("Total matching users: %d\n", count)
 }
 ```
 

@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/hadi77ir/go-query/parser"
-	"github.com/hadi77ir/go-query/query"
+	"github.com/hadi77ir/go-query/v2/parser"
+	"github.com/hadi77ir/go-query/v2/query"
 )
 
 func TestDebugSecurity(t *testing.T) {
@@ -27,7 +27,7 @@ func TestDebugSecurity(t *testing.T) {
 	q, _ := p.Parse()
 
 	var results []User
-	_, err := executor.Execute(context.Background(), q, &results)
+	_, err := executor.Execute(context.Background(), q, "", &results)
 
 	t.Logf("Error: %v", err)
 	t.Logf("Results: %v", results)

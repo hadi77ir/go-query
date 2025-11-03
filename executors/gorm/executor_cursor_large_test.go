@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hadi77ir/go-query/parser"
-	"github.com/hadi77ir/go-query/query"
+	"github.com/hadi77ir/go-query/v2/parser"
+	"github.com/hadi77ir/go-query/v2/query"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
@@ -63,7 +63,6 @@ func TestGORMExecutor_CursorPaginationLargeDataset(t *testing.T) {
 
 	t.Run("forward pagination through all pages", func(t *testing.T) {
 		var allPages [][]Product
-		var cursors []string
 		currentCursor := ""
 
 		// Navigate forward through all pages
@@ -73,12 +72,8 @@ func TestGORMExecutor_CursorPaginationLargeDataset(t *testing.T) {
 			q, err := p.Parse()
 			require.NoError(t, err)
 
-			if currentCursor != "" {
-				q.Cursor = currentCursor
-			}
-
 			var page []Product
-			result, err := executor.Execute(ctx, q, &page)
+			result, err := executor.Execute(ctx, q, currentCursor, &page)
 			require.NoError(t, err, "Page should execute successfully")
 
 			if len(page) == 0 {
@@ -86,7 +81,6 @@ func TestGORMExecutor_CursorPaginationLargeDataset(t *testing.T) {
 			}
 
 			allPages = append(allPages, page)
-			cursors = append(cursors, result.NextPageCursor)
 
 			if result.NextPageCursor == "" {
 				break // Last page
@@ -125,20 +119,17 @@ func TestGORMExecutor_CursorPaginationLargeDataset(t *testing.T) {
 		q, _ := p.Parse()
 
 		var page1 []Product
-		result1, _ := executor.Execute(ctx, q, &page1)
-		q.Cursor = result1.NextPageCursor
+		result1, _ := executor.Execute(ctx, q, "", &page1)
 
 		var page2 []Product
-		result2, _ := executor.Execute(ctx, q, &page2)
-		q.Cursor = result2.NextPageCursor
+		result2, _ := executor.Execute(ctx, q, result1.NextPageCursor, &page2)
 
 		var page3 []Product
-		result3, _ := executor.Execute(ctx, q, &page3)
+		result3, _ := executor.Execute(ctx, q, result2.NextPageCursor, &page3)
 
 		// Now go backward
-		q.Cursor = result3.PrevPageCursor
 		var backToPage2 []Product
-		resultBack, err := executor.Execute(ctx, q, &backToPage2)
+		resultBack, err := executor.Execute(ctx, q, result3.PrevPageCursor, &backToPage2)
 		require.NoError(t, err)
 
 		// Verify we're back at page 2 - cursor pagination may not preserve exact boundaries
@@ -150,9 +141,8 @@ func TestGORMExecutor_CursorPaginationLargeDataset(t *testing.T) {
 		assert.LessOrEqual(t, backToPage2[len(backToPage2)-1].ID, page2[len(page2)-1].ID+uint(len(page2)))
 
 		// Go back one more page
-		q.Cursor = resultBack.PrevPageCursor
 		var backToPage1 []Product
-		resultBackTo1, err := executor.Execute(ctx, q, &backToPage1)
+		resultBackTo1, err := executor.Execute(ctx, q, resultBack.PrevPageCursor, &backToPage1)
 		require.NoError(t, err)
 
 		assert.Equal(t, len(page1), len(backToPage1))
@@ -169,17 +159,15 @@ func TestGORMExecutor_CursorPaginationLargeDataset(t *testing.T) {
 		q, _ := p.Parse()
 
 		var page1 []Product
-		result1, _ := executor.Execute(ctx, q, &page1)
+		result1, _ := executor.Execute(ctx, q, "", &page1)
 		cursor := result1.NextPageCursor
 
 		// Use same cursor multiple times - should get same results
 		var page2a []Product
-		q.Cursor = cursor
-		result2a, _ := executor.Execute(ctx, q, &page2a)
+		result2a, _ := executor.Execute(ctx, q, cursor, &page2a)
 
 		var page2b []Product
-		q.Cursor = cursor
-		result2b, _ := executor.Execute(ctx, q, &page2b)
+		result2b, _ := executor.Execute(ctx, q, cursor, &page2b)
 
 		// Results should be identical
 		assert.Equal(t, len(page2a), len(page2b))
@@ -196,7 +184,7 @@ func TestGORMExecutor_CursorPaginationLargeDataset(t *testing.T) {
 
 		// First page
 		var firstPage []Product
-		resultFirst, _ := executor.Execute(ctx, q, &firstPage)
+		resultFirst, _ := executor.Execute(ctx, q, "", &firstPage)
 		assert.NotEmpty(t, resultFirst.NextPageCursor, "First page should have next cursor")
 		assert.Empty(t, resultFirst.PrevPageCursor, "First page should not have prev cursor")
 		assert.Equal(t, 1, resultFirst.ShowingFrom)
@@ -204,10 +192,9 @@ func TestGORMExecutor_CursorPaginationLargeDataset(t *testing.T) {
 
 		// Navigate to last page
 		currentCursor := resultFirst.NextPageCursor
+		var page []Product
 		for {
-			q.Cursor = currentCursor
-			var page []Product
-			result, _ := executor.Execute(ctx, q, &page)
+			result, _ := executor.Execute(ctx, q, currentCursor, &page)
 
 			if result.NextPageCursor == "" {
 				// Last page
@@ -235,12 +222,8 @@ func TestGORMExecutor_CursorPaginationLargeDataset(t *testing.T) {
 		currentCursor := ""
 
 		for {
-			if currentCursor != "" {
-				q.Cursor = currentCursor
-			}
-
 			var page []Product
-			result, err := executor.Execute(ctx, q, &page)
+			result, err := executor.Execute(ctx, q, currentCursor, &page)
 			require.NoError(t, err)
 
 			if len(page) == 0 {
@@ -268,10 +251,9 @@ func TestGORMExecutor_CursorPaginationLargeDataset(t *testing.T) {
 		}
 
 		// Get total count without pagination
-		q.Cursor = ""
 		q.PageSize = 0 // Get all
 		var allFiltered []Product
-		resultAll, _ := executor.Execute(ctx, q, &allFiltered)
+		resultAll, _ := executor.Execute(ctx, q, "", &allFiltered)
 		assert.Equal(t, int64(totalFiltered), resultAll.TotalItems, "Should match filtered total")
 	})
 
@@ -282,7 +264,7 @@ func TestGORMExecutor_CursorPaginationLargeDataset(t *testing.T) {
 			q, _ := p.Parse()
 
 			var page1 []Product
-			result1, _ := executor.Execute(ctx, q, &page1)
+			result1, _ := executor.Execute(ctx, q, "", &page1)
 
 			// Verify descending order
 			for i := 1; i < len(page1); i++ {
@@ -290,9 +272,8 @@ func TestGORMExecutor_CursorPaginationLargeDataset(t *testing.T) {
 			}
 
 			// Navigate to next page
-			q.Cursor = result1.NextPageCursor
 			var page2 []Product
-			_, _ = executor.Execute(ctx, q, &page2)
+			_, _ = executor.Execute(ctx, q, result1.NextPageCursor, &page2)
 
 			// Verify continuity
 			assert.Greater(t, page1[len(page1)-1].ID, page2[0].ID, "Descending order should continue")
@@ -303,7 +284,7 @@ func TestGORMExecutor_CursorPaginationLargeDataset(t *testing.T) {
 			q, _ := p.Parse()
 
 			var page1 []Product
-			result1, _ := executor.Execute(ctx, q, &page1)
+			result1, _ := executor.Execute(ctx, q, "", &page1)
 
 			// Verify ascending price order
 			for i := 1; i < len(page1); i++ {
@@ -311,9 +292,8 @@ func TestGORMExecutor_CursorPaginationLargeDataset(t *testing.T) {
 			}
 
 			// Navigate forward
-			q.Cursor = result1.NextPageCursor
 			var page2 []Product
-			_, _ = executor.Execute(ctx, q, &page2)
+			_, _ = executor.Execute(ctx, q, result1.NextPageCursor, &page2)
 
 			// Verify continuity
 			assert.LessOrEqual(t, page1[len(page1)-1].Price, page2[0].Price)
@@ -325,9 +305,8 @@ func TestGORMExecutor_CursorPaginationLargeDataset(t *testing.T) {
 		q, _ := p.Parse()
 
 		// Test invalid cursor
-		q.Cursor = "invalid-cursor-string"
 		var products []Product
-		_, err := executor.Execute(ctx, q, &products)
+		_, err := executor.Execute(ctx, q, "invalid-cursor-string", &products)
 		require.Error(t, err)
 		assert.ErrorIs(t, err, query.ErrInvalidCursor)
 	})
@@ -342,15 +321,14 @@ func TestGORMExecutor_CursorPaginationLargeDataset(t *testing.T) {
 			q.PageSize = size
 
 			var page1 []Product
-			result1, _ := executor.Execute(ctx, q, &page1)
+			result1, _ := executor.Execute(ctx, q, "", &page1)
 
 			assert.Equal(t, size, len(page1), "Page size %d", size)
 			assert.NotEmpty(t, result1.NextPageCursor, "Should have next cursor with page size %d", size)
 
 			// Navigate to next page
-			q.Cursor = result1.NextPageCursor
 			var page2 []Product
-			_, _ = executor.Execute(ctx, q, &page2)
+			_, _ = executor.Execute(ctx, q, result1.NextPageCursor, &page2)
 
 			assert.Equal(t, size, len(page2), "Second page size %d", size)
 			assert.NotEqual(t, page1[0].ID, page2[0].ID, "Pages should be different")
@@ -363,15 +341,13 @@ func TestGORMExecutor_CursorPaginationLargeDataset(t *testing.T) {
 		q, _ := p.Parse()
 
 		var page1 []Product
-		result1, _ := executor.Execute(ctx, q, &page1)
+		result1, _ := executor.Execute(ctx, q, "", &page1)
 		cursor := result1.NextPageCursor
 
 		// Use same cursor concurrently (simulated)
 		var page2a, page2b []Product
-		q.Cursor = cursor
-		result2a, _ := executor.Execute(ctx, q, &page2a)
-		q.Cursor = cursor
-		result2b, _ := executor.Execute(ctx, q, &page2b)
+		result2a, _ := executor.Execute(ctx, q, cursor, &page2a)
+		result2b, _ := executor.Execute(ctx, q, cursor, &page2b)
 
 		// Results should be identical
 		assert.Equal(t, len(page2a), len(page2b))

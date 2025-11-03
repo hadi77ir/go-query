@@ -17,9 +17,9 @@ Product search with multiple criteria:
 ```go
 import (
     "context"
-    "github.com/hadi77ir/go-query/executors/mongodb"
-    "github.com/hadi77ir/go-query/parser"
-    "github.com/hadi77ir/go-query/query"
+    "github.com/hadi77ir/go-query/v2/executors/mongodb"
+    "github.com/hadi77ir/go-query/v2/parser"
+    "github.com/hadi77ir/go-query/v2/query"
 )
 
 // Setup
@@ -36,7 +36,7 @@ queryStr := `
 
 q, _ := cache.Parse(queryStr)
 var products []Product
-result, _ := executor.Execute(ctx, q, &products)
+result, _ := executor.Execute(ctx, q, "", &products)
 ```
 
 ### With Pagination
@@ -57,9 +57,8 @@ result, _ := executor.Execute(ctx, q, &products)
 
 // Navigate to next page
 if result.NextPageCursor != "" {
-    q.Cursor = result.NextPageCursor
     var nextPage []Product
-    executor.Execute(ctx, q, &nextPage)
+    executor.Execute(ctx, q, result.NextPageCursor, &nextPage)
 }
 ```
 
@@ -75,7 +74,7 @@ cache := parser.NewParserCache(100)
 q, _ := cache.Parse(queryStr)
 
 var users []User
-result, _ := executor.Execute(ctx, q, &users)
+result, _ := executor.Execute(ctx, q, "", &users)
 ```
 
 ### Search by Email
@@ -92,7 +91,7 @@ queryStr := `@gmail.com status = active`
 q, _ := cache.Parse(queryStr)
 
 var users []User
-executor.Execute(ctx, q, &users)
+executor.Execute(ctx, q, "", &users)
 ```
 
 ### Advanced User Filtering
@@ -107,7 +106,7 @@ queryStr := `
 
 q, _ := cache.Parse(queryStr)
 var admins []User
-executor.Execute(ctx, q, &admins)
+executor.Execute(ctx, q, "", &admins)
 ```
 
 ## Content Search
@@ -124,7 +123,7 @@ queryStr := `
 
 q, _ := cache.Parse(queryStr)
 var posts []Post
-result, _ := executor.Execute(ctx, q, &posts)
+result, _ := executor.Execute(ctx, q, "", &posts)
 ```
 
 ### Content Filtering with Tags
@@ -141,7 +140,7 @@ queryStr := `
 
 q, _ := cache.Parse(queryStr)
 var content []Content
-executor.Execute(ctx, q, &content)
+executor.Execute(ctx, q, "", &content)
 ```
 
 ## API Endpoints
@@ -155,9 +154,9 @@ import (
     "encoding/json"
     "net/http"
     
-    "github.com/hadi77ir/go-query/executors/memory"
-    "github.com/hadi77ir/go-query/parser"
-    "github.com/hadi77ir/go-query/query"
+    "github.com/hadi77ir/go-query/v2/executors/memory"
+    "github.com/hadi77ir/go-query/v2/parser"
+    "github.com/hadi77ir/go-query/v2/query"
 )
 
 var parserCache = parser.NewParserCache(100) // Shared cache
@@ -179,7 +178,7 @@ func searchProducts(w http.ResponseWriter, r *http.Request) {
     // Execute on in-memory data
     executor := memory.NewExecutor(products, query.DefaultExecutorOptions())
     var results []Product
-    result, err := executor.Execute(r.Context(), q, &results)
+    result, err := executor.Execute(r.Context(), q, "", &results)
     if err != nil {
         http.Error(w, "Query execution failed", http.StatusInternalServerError)
         return
@@ -223,7 +222,7 @@ func ProductsHandler(w http.ResponseWriter, r *http.Request) {
     }
     
     var products []Product
-    result, err := executor.Execute(r.Context(), q, &products)
+    result, err := executor.Execute(r.Context(), q, "", &products)
     // ... handle response
 }
 ```
@@ -247,7 +246,7 @@ func TestProductSearch(t *testing.T) {
     q, _ := cache.Parse("price < 100 and in_stock = true")
     
     var results []Product
-    result, err := executor.Execute(context.Background(), q, &results)
+    result, err := executor.Execute(context.Background(), q, "", &results)
     require.NoError(t, err)
     assert.Equal(t, 1, len(results))
     assert.Equal(t, "Test Product", results[0].Name)
@@ -271,7 +270,7 @@ func TestUserSearch(t *testing.T) {
     // Test query
     q, _ := cache.Parse("status = active and role = admin")
     var users []User
-    result, err := executor.Execute(ctx, q, &users)
+    result, err := executor.Execute(ctx, q, "", &users)
     
     require.NoError(t, err)
     assert.Greater(t, len(users), 0)
@@ -295,7 +294,7 @@ queryStr := `
 
 q, _ := cache.Parse(queryStr)
 var items []Item
-executor.Execute(ctx, q, &items)
+executor.Execute(ctx, q, "", &items)
 ```
 
 ### Complex Nested Queries
@@ -315,7 +314,7 @@ queryStr := `
 
 q, _ := cache.Parse(queryStr)
 var products []Product
-executor.Execute(ctx, q, &products)
+executor.Execute(ctx, q, "", &products)
 ```
 
 ### Mixed Search Types
@@ -331,7 +330,7 @@ queryStr := `
 
 q, _ := cache.Parse(queryStr)
 var products []Product
-executor.Execute(ctx, q, &products)
+executor.Execute(ctx, q, "", &products)
 ```
 
 ## See Also

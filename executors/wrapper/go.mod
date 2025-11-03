@@ -1,10 +1,10 @@
-module github.com/hadi77ir/go-query/executors/wrapper
+module github.com/hadi77ir/go-query/v2/executors/wrapper
 
 go 1.24.0
 
 require (
-	github.com/hadi77ir/go-query v1.0.0
-	github.com/hadi77ir/go-query/executors/memory v1.0.0
+	github.com/hadi77ir/go-query/v2 v2.0.0
+	github.com/hadi77ir/go-query/v2/executors/memory v1.0.0
 	github.com/stretchr/testify v1.10.0
 )
 
@@ -16,6 +16,6 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/hadi77ir/go-query => ../..
+replace github.com/hadi77ir/go-query/v2 => ../..
 
-replace github.com/hadi77ir/go-query/executors/memory => ../memory
+replace github.com/hadi77ir/go-query/v2/executors/memory => ../memory

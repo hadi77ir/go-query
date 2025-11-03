@@ -68,7 +68,7 @@ NewExecutionError(operation string, err error) error
 ### Pattern 1: Simple Error Check
 
 ```go
-result, err := executor.Execute(ctx, query, &products)
+result, err := executor.Execute(ctx, query, "", &products)
 if errors.Is(err, query.ErrNoRecordsFound) {
     return http.StatusNotFound
 }
@@ -133,7 +133,7 @@ Empty results now return `ErrNoRecordsFound` instead of `nil` error.
 
 **Before:**
 ```go
-result, err := executor.Execute(ctx, query, &products)
+result, err := executor.Execute(ctx, query, "", &products)
 if err != nil {
     return err  // Error
 }
@@ -144,7 +144,7 @@ if len(products) == 0 {
 
 **After:**
 ```go
-result, err := executor.Execute(ctx, query, &products)
+result, err := executor.Execute(ctx, query, "", &products)
 if errors.Is(err, query.ErrNoRecordsFound) {
     return http.StatusNotFound  // Empty (expected)
 }
@@ -248,9 +248,9 @@ import (
     "fmt"
     "net/http"
     
-    "github.com/hadi77ir/go-query/executors/gorm"
-    "github.com/hadi77ir/go-query/parser"
-    "github.com/hadi77ir/go-query/query"
+    "github.com/hadi77ir/go-query/v2/executors/gorm"
+    "github.com/hadi77ir/go-query/v2/parser"
+    "github.com/hadi77ir/go-query/v2/query"
 )
 
 func handleQuery(w http.ResponseWriter, r *http.Request) {
@@ -267,7 +267,7 @@ func handleQuery(w http.ResponseWriter, r *http.Request) {
     // Execute query
     executor := getExecutor()
     var results []Product
-    result, err := executor.Execute(r.Context(), q, &results)
+    result, err := executor.Execute(r.Context(), q, "", &results)
     
     // Handle errors
     if err != nil {

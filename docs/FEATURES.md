@@ -7,13 +7,14 @@ This document covers all features of the go-query library, including new additio
 ## Table of Contents
 
 1. [Parser Cache](#parser-cache) ⭐ **Recommended for Production**
-2. [Map Support](#map-support)
-3. [Dynamic Data Sources](#dynamic-data-sources)
-4. [Custom Field Getter](#custom-field-getter)
-5. [Query Options](#query-options)
-6. [REGEX Support](#regex-support)
-7. [Unicode Handling](#unicode-handling)
-8. [Field Restriction](#field-restriction)
+2. [Count Method](#count-method)
+3. [Map Support](#map-support)
+4. [Dynamic Data Sources](#dynamic-data-sources)
+5. [Custom Field Getter](#custom-field-getter)
+6. [Query Options](#query-options)
+7. [REGEX Support](#regex-support)
+8. [Unicode Handling](#unicode-handling)
+9. [Field Restriction](#field-restriction)
 
 ## Parser Cache
 
@@ -30,7 +31,7 @@ The `ParserCache` is a thread-safe cache that stores parsed query results, drama
 
 ```go
 import (
-    "github.com/hadi77ir/go-query/parser"
+    "github.com/hadi77ir/go-query/v2/parser"
 )
 
 // Create cache with capacity (recommended: 50-100 for most applications)
@@ -128,6 +129,107 @@ fmt.Printf("Cache size: %d, Total accesses: %d\n",
 4. **Monitor stats**: Use `GetStats()` to understand cache effectiveness
 5. **Clear if needed**: Use `Clear()` if you need to reset the cache
 
+## Count Method
+
+The `Count` method allows you to get the total number of items that would be returned by a query **without applying pagination**. This is useful for displaying totals, pagination indicators, and performance optimization.
+
+### Basic Usage
+
+```go
+// Parse a query
+cache := parser.NewParserCache(100)
+q, _ := cache.Parse("category = electronics and price > 100")
+
+// Get count (ignores pagination)
+count, err := executor.Count(ctx, q)
+if err != nil {
+    // Handle error
+}
+
+fmt.Printf("Found %d matching items\n", count)
+```
+
+### Key Features
+
+- **No Pagination**: Count ignores `page_size` and cursors - it counts **all** matching items
+- **Same Filters**: Uses the exact same filter logic as `Execute` - results always match
+- **Performance**: More efficient than executing and counting results manually
+- **Consistent**: Count will always match `result.TotalItems` from `Execute` with the same query
+
+### Example: Display Total Before Pagination
+
+```go
+// User wants to see: "Showing 1-20 of 150 results"
+q, _ := cache.Parse("category = electronics page_size = 20")
+
+// Get total count
+totalCount, _ := executor.Count(ctx, q)
+
+// Execute first page
+var page []Product
+result, _ := executor.Execute(ctx, q, "", &page)
+
+fmt.Printf("Showing %d-%d of %d results\n", 
+    result.ShowingFrom, 
+    result.ShowingTo, 
+    totalCount) // totalCount matches result.TotalItems
+```
+
+### Example: Conditional Query Execution
+
+```go
+// Only fetch data if there are results
+count, err := executor.Count(ctx, q)
+if err != nil {
+    return err
+}
+
+if count == 0 {
+    // No results - return empty response early
+    return json.NewEncoder(w).Encode(map[string]interface{}{
+        "total": 0,
+        "data": []Product{},
+    })
+}
+
+// Proceed with execution
+var products []Product
+result, err := executor.Execute(ctx, q, "", &products)
+```
+
+### Example: API Response with Count
+
+```go
+func searchHandler(w http.ResponseWriter, r *http.Request) {
+    filter := r.URL.Query().Get("filter")
+    cursor := r.URL.Query().Get("cursor")
+    
+    q, _ := cache.Parse(filter)
+    
+    // Get total count
+    totalCount, _ := executor.Count(ctx, q)
+    
+    // Execute query with cursor
+    var results []Product
+    result, _ := executor.Execute(ctx, q, cursor, &results)
+    
+    // Return response
+    json.NewEncoder(w).Encode(map[string]interface{}{
+        "total": totalCount,      // From Count()
+        "showing": result.TotalItems, // From Execute() - should match!
+        "data": results,
+        "next_cursor": result.NextPageCursor,
+    })
+}
+```
+
+### Notes
+
+- **Count matches TotalItems**: When you call `Execute`, the `result.TotalItems` field contains the same value you'd get from `Count` - they use the same counting logic
+- **No Performance Benefit for Single Queries**: If you're already executing the query, `result.TotalItems` already contains the count
+- **Useful for Separate Count Requests**: Count is most useful when you need the count separately from execution (e.g., showing totals before pagination UI renders)
+- **Works with All Executors**: GORM, MongoDB, Memory, and Wrapper executors all support Count
+
 ## Map Support
 
 The Memory Executor supports querying maps without any additional setup.
@@ -154,7 +256,7 @@ cache := parser.NewParserCache(100)
 q, _ := cache.Parse("active = true and price < 100")
 
 var results []map[string]interface{}
-executor.Execute(ctx, q, &results)
+executor.Execute(ctx, q, "", &results)
 ```
 
 ### Features
@@ -185,13 +287,13 @@ executor := memory.NewExecutorWithDataSource(func() interface{} {
 }, opts)
 
 // Query 1 - sees initial data
-executor.Execute(ctx, query, &results1)
+executor.Execute(ctx, query, "", &results1)
 
 // Update cache
 cache.Products[0].Stock = 0
 
 // Query 2 - sees updated data
-executor.Execute(ctx, query, &results2)
+executor.Execute(ctx, query, "", &results2)
 ```
 
 ### Use Cases
@@ -298,8 +400,8 @@ opts := &memory.MemoryExecutorOptions{
 }
 
 // Query nested data with simple field names
-executor.Execute(ctx, parseQuery("department = Engineering"), &results)
-executor.Execute(ctx, parseQuery("level > 5"), &results)
+executor.Execute(ctx, parseQuery("department = Engineering"), "", &results)
+executor.Execute(ctx, parseQuery("level > 5"), "", &results)
 ```
 
 ### Combining with Field Restriction
@@ -392,9 +494,9 @@ opts := &memory.MemoryExecutorOptions{
 executor := memory.NewExecutorWithOptions(employees, opts)
 
 // Query by computed fields!
-executor.Execute(ctx, parseQuery("age > 30"), &results)
-executor.Execute(ctx, parseQuery(`salary_category = "senior"`), &results)
-executor.Execute(ctx, parseQuery(`fullname CONTAINS "Smith"`), &results)
+executor.Execute(ctx, parseQuery("age > 30"), "", &results)
+executor.Execute(ctx, parseQuery(`salary_category = "senior"`), "", &results)
+executor.Execute(ctx, parseQuery(`fullname CONTAINS "Smith"`), "", &results)
 ```
 
 ## Query Options
@@ -511,17 +613,15 @@ query := "page_size = 20 sort_by = _id"
 q, _ := parser.Parse(query)
 
 var page1 []Product
-result1, _ := executor.Execute(ctx, q, &page1)
+result1, _ := executor.Execute(ctx, q, "", &page1)
 
 // Get next page using cursor
-q.Cursor = result1.NextPageCursor
 var page2 []Product
-result2, _ := executor.Execute(ctx, q, &page2)
+result2, _ := executor.Execute(ctx, q, result1.NextPageCursor, &page2)
 
 // Get previous page
-q.Cursor = result2.PrevPageCursor
 var page1Again []Product
-executor.Execute(ctx, q, &page1Again)
+executor.Execute(ctx, q, result2.PrevPageCursor, &page1Again)
 ```
 
 **Cursor Properties:**
@@ -705,7 +805,7 @@ opts.DisableRegex = true  // For SQLite
 executor := gorm.NewExecutor(db, &Product{}, opts)
 
 // Now REGEX queries return helpful errors:
-_, err := executor.Execute(ctx, parseQuery(`name REGEX "pattern"`), &products)
+_, err := executor.Execute(ctx, parseQuery(`name REGEX "pattern"`), "", &products)
 // Error: "REGEX operator is not supported by this database.
 //         Consider using LIKE, CONTAINS, STARTS_WITH, or ENDS_WITH instead"
 ```

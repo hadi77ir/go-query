@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/hadi77ir/go-query/parser"
-	"github.com/hadi77ir/go-query/query"
+	"github.com/hadi77ir/go-query/v2/parser"
+	"github.com/hadi77ir/go-query/v2/query"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -29,7 +29,7 @@ func TestGORMExecutor_RegexDisabled(t *testing.T) {
 		require.NoError(t, err)
 
 		var products []Product
-		_, err = executor.Execute(ctx, q, &products)
+		_, err = executor.Execute(ctx, q, "", &products)
 		require.Error(t, err)
 		assert.True(t, errors.Is(err, query.ErrRegexNotSupported))
 	})
@@ -53,7 +53,7 @@ func TestGORMExecutor_RegexDisabled(t *testing.T) {
 				require.NoError(t, err)
 
 				var products []Product
-				_, err = executor.Execute(ctx, q, &products)
+				_, err = executor.Execute(ctx, q, "", &products)
 				require.NoError(t, err, "Operator %s should work even with regex disabled", tt.name)
 			})
 		}

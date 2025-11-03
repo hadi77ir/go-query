@@ -3,7 +3,7 @@ package parser
 import (
 	"testing"
 
-	"github.com/hadi77ir/go-query/query"
+	"github.com/hadi77ir/go-query/v2/query"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -240,10 +240,11 @@ func TestParser_QueryOptions(t *testing.T) {
 			},
 		},
 		{
-			name:  "cursor",
+			name:  "cursor (no longer part of query)",
 			input: "cursor = abc123 user_id = 123",
 			expected: func(t *testing.T, q *query.Query) {
-				assert.Equal(t, "abc123", q.Cursor)
+				// Cursor is no longer part of Query - it should be passed separately to Execute
+				// The parser should ignore cursor option now
 			},
 		},
 		{

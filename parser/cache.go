@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hadi77ir/go-query/query"
+	"github.com/hadi77ir/go-query/v2/query"
 )
 
 // cacheEntry represents a cached parsed query

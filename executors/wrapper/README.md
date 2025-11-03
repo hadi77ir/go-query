@@ -13,7 +13,7 @@ A wrapper executor for go-query that imposes additional field restrictions on to
 ## Installation
 
 ```bash
-go get github.com/hadi77ir/go-query/executors/wrapper
+go get github.com/hadi77ir/go-query/v2/executors/wrapper
 ```
 
 ## Quick Start
@@ -27,10 +27,10 @@ import (
     "context"
     "fmt"
     
-    "github.com/hadi77ir/go-query/executors/memory"
-    "github.com/hadi77ir/go-query/executors/wrapper"
-    "github.com/hadi77ir/go-query/parser"
-    "github.com/hadi77ir/go-query/query"
+    "github.com/hadi77ir/go-query/v2/executors/memory"
+    "github.com/hadi77ir/go-query/v2/executors/wrapper"
+    "github.com/hadi77ir/go-query/v2/parser"
+    "github.com/hadi77ir/go-query/v2/query"
 )
 
 type User struct {
@@ -63,7 +63,7 @@ func main() {
     p, _ := parser.NewParser("name = Alice")
     q, _ := p.Parse()
     var result []User
-    wrapperExecutor.Execute(ctx, q, &result)
+    wrapperExecutor.Execute(ctx, q, "", &result)
     fmt.Printf("Found %d users\n", len(result))
     
     // This fails - id is not in wrapper's allowed list
@@ -155,7 +155,7 @@ All fields in complex filter expressions (AND/OR) are validated:
 // This will fail because "balance" is not in wrapper's list
 p, _ := parser.NewParser("name = Alice AND balance > 50")
 q, _ := p.Parse()
-_, err := wrapperExecutor.Execute(ctx, q, &result)
+_, err := wrapperExecutor.Execute(ctx, q, "", &result)
 // Error: field 'balance': field not allowed
 ```
 
@@ -165,7 +165,7 @@ Sort fields are also validated:
 
 ```go
 q.SortBy = "balance"
-_, err := wrapperExecutor.Execute(ctx, q, &result)
+_, err := wrapperExecutor.Execute(ctx, q, "", &result)
 // Error: field 'balance': field not allowed
 ```
 
@@ -191,10 +191,38 @@ func NewExecutor(innerExecutor executor.Executor, allowedFields []string) *Wrapp
 Executes a query with field restrictions.
 
 ```go
-func (e *WrapperExecutor) Execute(ctx context.Context, q *query.Query, dest interface{}) (*query.Result, error)
+func (e *WrapperExecutor) Execute(ctx context.Context, q *query.Query, cursor string, dest interface{}) (*query.Result, error)
 ```
 
+**Parameters:**
+- `ctx`: Context for the operation
+- `q`: The parsed query
+- `cursor`: Optional cursor string for pagination (empty string for first page)
+- `dest`: Pointer to slice where results will be stored
+
+**Returns:**
+- `*query.Result`: Query results with pagination info
+- `error`: Error if execution fails or fields are not allowed
+
 Validates all fields in the query against the wrapper's allowed fields before delegating to the inner executor.
+
+### Count
+
+Returns the total number of items that would be returned by the given query without applying pagination.
+
+```go
+func (e *WrapperExecutor) Count(ctx context.Context, q *query.Query) (int64, error)
+```
+
+**Parameters:**
+- `ctx`: Context for the operation
+- `q`: The parsed query
+
+**Returns:**
+- `int64`: Total count of matching items
+- `error`: Error if count fails or fields are not allowed
+
+The Count method also validates fields against the wrapper's restrictions before delegating to the inner executor.
 
 ### Close
 
@@ -220,7 +248,7 @@ The wrapper executor returns standard go-query errors:
 - Errors from inner executor: Passed through as-is
 
 ```go
-_, err := wrapperExecutor.Execute(ctx, q, &result)
+_, err := wrapperExecutor.Execute(ctx, q, "", &result)
 if err != nil {
     var fieldErr *query.FieldError
     if errors.As(err, &fieldErr) {

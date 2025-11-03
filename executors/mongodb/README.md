@@ -5,7 +5,7 @@ MongoDB implementation for go-query.
 ## Installation
 
 ```bash
-go get github.com/hadi77ir/go-query/executors/mongodb
+go get github.com/hadi77ir/go-query/v2/executors/mongodb
 ```
 
 ## Usage
@@ -17,9 +17,9 @@ import (
     "context"
     "log"
     
-    "github.com/hadi77ir/go-query/executors/mongodb"
-    "github.com/hadi77ir/go-query/parser"
-    "github.com/hadi77ir/go-query/query"
+    "github.com/hadi77ir/go-query/v2/executors/mongodb"
+    "github.com/hadi77ir/go-query/v2/parser"
+    "github.com/hadi77ir/go-query/v2/query"
     "go.mongodb.org/mongo-driver/mongo"
     "go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -51,15 +51,24 @@ func main() {
     cache := parser.NewParserCache(100)
     q, _ := cache.Parse("status = active and age >= 18")
     
-    result, err := exec.Execute(ctx, q)
+    var users []User
+    result, err := exec.Execute(ctx, q, "", &users)
     if err != nil {
         log.Fatal(err)
     }
     
     // Use results
-    for _, item := range result.Data {
-        // Process items
+    for _, user := range users {
+        // Process user
+        fmt.Println(user.Name)
     }
+    
+    // Get count separately (optional)
+    count, err := exec.Count(ctx, q)
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Printf("Total matching users: %d\n", count)
 }
 ```
 

@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/hadi77ir/go-query/parser"
-	"github.com/hadi77ir/go-query/query"
+	"github.com/hadi77ir/go-query/v2/parser"
+	"github.com/hadi77ir/go-query/v2/query"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -60,7 +60,7 @@ func TestGORMExecutor_SQLInjectionProtection(t *testing.T) {
 				var products []Product
 				// Should not error - values are parameterized
 				// Will return ErrNoRecordsFound since no products match
-				result, err := executor.Execute(ctx, q, &products)
+				result, err := executor.Execute(ctx, q, "", &products)
 				require.Error(t, err)
 				assert.True(t, errors.Is(err, query.ErrNoRecordsFound))
 				// Should return 0 results (no product with that exact name)
@@ -123,7 +123,7 @@ func TestGORMExecutor_SQLInjectionProtection(t *testing.T) {
 				}
 
 				var products []Product
-				_, err := executor.Execute(ctx, q, &products)
+				_, err := executor.Execute(ctx, q, "", &products)
 				// Should return error due to invalid field name
 				require.Error(t, err)
 				assert.True(t, errors.Is(err, query.ErrInvalidFieldName))
@@ -174,7 +174,7 @@ func TestGORMExecutor_SQLInjectionProtection(t *testing.T) {
 				}
 
 				var products []Product
-				_, err := executor.Execute(ctx, q, &products)
+				_, err := executor.Execute(ctx, q, "", &products)
 				// Should not error due to field name validation
 				// (might error due to "no such column" but not "invalid field name")
 				if err != nil {
@@ -206,7 +206,7 @@ func TestGORMExecutor_SQLInjectionProtection(t *testing.T) {
 				},
 			}
 			var products []Product
-			_, err := executor.Execute(ctx, q, &products)
+			_, err := executor.Execute(ctx, q, "", &products)
 			if err != nil {
 				assert.False(t, errors.Is(err, query.ErrInvalidFieldName),
 					"Field '%s' should pass validation (may fail for other reasons)", field)
@@ -238,7 +238,7 @@ func TestGORMExecutor_SQLInjectionProtection(t *testing.T) {
 				},
 			}
 			var products []Product
-			_, err := executor.Execute(ctx, q, &products)
+			_, err := executor.Execute(ctx, q, "", &products)
 			require.Error(t, err, "Field '%s' should be rejected", field)
 			assert.True(t, errors.Is(err, query.ErrInvalidFieldName),
 				"Field '%s' should fail with invalid field name error", field)
@@ -282,7 +282,7 @@ func TestGORMExecutor_SQLInjectionProtection(t *testing.T) {
 				require.NoError(t, err)
 
 				var products []Product
-				result, err := executor.Execute(ctx, q, &products)
+				result, err := executor.Execute(ctx, q, "", &products)
 
 				// Should execute safely (values are parameterized)
 				// Will return ErrNoRecordsFound since injection attempt is treated as literal string
@@ -325,7 +325,7 @@ func TestGORMExecutor_AllowedFieldsAdditionalSecurity(t *testing.T) {
 		}
 
 		var products []Product
-		_, err := executor.Execute(ctx, q, &products)
+		_, err := executor.Execute(ctx, q, "", &products)
 		// Empty result will return ErrNoRecordsFound
 		if err != nil && !errors.Is(err, query.ErrNoRecordsFound) {
 			t.Fatalf("Unexpected error: %v", err)
@@ -342,7 +342,7 @@ func TestGORMExecutor_AllowedFieldsAdditionalSecurity(t *testing.T) {
 		}
 
 		var products []Product
-		_, err := executor.Execute(ctx, q, &products)
+		_, err := executor.Execute(ctx, q, "", &products)
 		require.Error(t, err)
 		assert.True(t, errors.Is(err, query.ErrFieldNotAllowed), "Expected ErrFieldNotAllowed")
 	})

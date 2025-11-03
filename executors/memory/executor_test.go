@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hadi77ir/go-query/parser"
-	"github.com/hadi77ir/go-query/query"
+	"github.com/hadi77ir/go-query/v2/parser"
+	"github.com/hadi77ir/go-query/v2/query"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -97,7 +97,7 @@ func TestMemoryExecutor_BasicComparisons(t *testing.T) {
 			require.NoError(t, err)
 
 			var products []Product
-			result, err := executor.Execute(ctx, q, &products)
+			result, err := executor.Execute(ctx, q, "", &products)
 			require.NoError(t, err)
 			assert.Equal(t, tt.expectedCount, len(products))
 			assert.Equal(t, int64(tt.expectedCount), result.TotalItems)
@@ -167,7 +167,7 @@ func TestMemoryExecutor_StringMatching(t *testing.T) {
 			q, _ := p.Parse()
 
 			var products []Product
-			result, err := executor.Execute(ctx, q, &products)
+			result, err := executor.Execute(ctx, q, "", &products)
 			require.NoError(t, err)
 			assert.Equal(t, tt.expectedCount, len(products), "Query: %s", tt.query)
 			assert.Equal(t, int64(tt.expectedCount), result.TotalItems)
@@ -213,7 +213,7 @@ func TestMemoryExecutor_ArrayOperations(t *testing.T) {
 			q, _ := p.Parse()
 
 			var products []Product
-			_, err := executor.Execute(ctx, q, &products)
+			_, err := executor.Execute(ctx, q, "", &products)
 			require.NoError(t, err)
 			assert.Equal(t, tt.expectedCount, len(products))
 		})
@@ -263,7 +263,7 @@ func TestMemoryExecutor_LogicalOperators(t *testing.T) {
 			q, _ := p.Parse()
 
 			var products []Product
-			_, err := executor.Execute(ctx, q, &products)
+			_, err := executor.Execute(ctx, q, "", &products)
 			require.NoError(t, err)
 			assert.Equal(t, tt.expectedCount, len(products), "Query: %s", tt.query)
 		})
@@ -310,7 +310,7 @@ func TestMemoryExecutor_BareSearch(t *testing.T) {
 			q, _ := p.Parse()
 
 			var products []Product
-			_, err := executor.Execute(ctx, q, &products)
+			_, err := executor.Execute(ctx, q, "", &products)
 			require.NoError(t, err)
 			assert.Equal(t, tt.expectedCount, len(products), "Query: %s", tt.query)
 		})
@@ -329,7 +329,7 @@ func TestMemoryExecutor_Pagination(t *testing.T) {
 		q, _ := p.Parse()
 
 		var products []Product
-		result, err := executor.Execute(ctx, q, &products)
+		result, err := executor.Execute(ctx, q, "", &products)
 		require.NoError(t, err)
 
 		assert.Equal(t, 3, len(products))
@@ -346,12 +346,11 @@ func TestMemoryExecutor_Pagination(t *testing.T) {
 		p, _ := parser.NewParser("page_size = 3 sort_by = id")
 		q, _ := p.Parse()
 		var products1 []Product
-		result1, _ := executor.Execute(ctx, q, &products1)
+		result1, _ := executor.Execute(ctx, q, "", &products1)
 
 		// Get second page
-		q.Cursor = result1.NextPageCursor
 		var products2 []Product
-		result2, err := executor.Execute(ctx, q, &products2)
+		result2, err := executor.Execute(ctx, q, result1.NextPageCursor, &products2)
 		require.NoError(t, err)
 
 		assert.Equal(t, 3, len(products2))
@@ -367,14 +366,12 @@ func TestMemoryExecutor_Pagination(t *testing.T) {
 		p, _ := parser.NewParser("page_size = 3 sort_by = id")
 		q, _ := p.Parse()
 		var products []Product
-		result, _ := executor.Execute(ctx, q, &products)
-		q.Cursor = result.NextPageCursor
-		result, _ = executor.Execute(ctx, q, &products)
+		result, _ := executor.Execute(ctx, q, "", &products)
+		result, _ = executor.Execute(ctx, q, result.NextPageCursor, &products)
 
 		// Go back to page 1
-		q.Cursor = result.PrevPageCursor
 		products = []Product{}
-		prevResult, err := executor.Execute(ctx, q, &products)
+		prevResult, err := executor.Execute(ctx, q, result.PrevPageCursor, &products)
 		require.NoError(t, err)
 
 		assert.Equal(t, 3, len(products))
@@ -424,7 +421,7 @@ func TestMemoryExecutor_Sorting(t *testing.T) {
 			q, _ := p.Parse()
 
 			var products []Product
-			_, err := executor.Execute(ctx, q, &products)
+			_, err := executor.Execute(ctx, q, "", &products)
 			require.NoError(t, err)
 
 			if tt.checkOrder != nil && len(products) >= 2 {
@@ -450,7 +447,7 @@ func TestMemoryExecutor_MapData(t *testing.T) {
 		q, _ := p.Parse()
 
 		var results []map[string]interface{}
-		_, err := executor.Execute(ctx, q, &results)
+		_, err := executor.Execute(ctx, q, "", &results)
 		require.NoError(t, err)
 		assert.Equal(t, 2, len(results))
 	})
@@ -460,7 +457,7 @@ func TestMemoryExecutor_MapData(t *testing.T) {
 		q, _ := p.Parse()
 
 		var results []map[string]interface{}
-		_, err := executor.Execute(ctx, q, &results)
+		_, err := executor.Execute(ctx, q, "", &results)
 		require.NoError(t, err)
 		assert.Equal(t, 30.0, results[0]["price"])
 	})
@@ -476,7 +473,7 @@ func TestMemoryExecutor_EdgeCases(t *testing.T) {
 		q, _ := p.Parse()
 
 		var products []Product
-		result, err := executor.Execute(ctx, q, &products)
+		result, err := executor.Execute(ctx, q, "", &products)
 		require.NoError(t, err)
 		assert.Equal(t, 0, len(products))
 		assert.Equal(t, int64(0), result.TotalItems)
@@ -487,7 +484,7 @@ func TestMemoryExecutor_EdgeCases(t *testing.T) {
 		q, _ := p.Parse()
 
 		var products []Product
-		result, err := executor.Execute(ctx, q, &products)
+		result, err := executor.Execute(ctx, q, "", &products)
 		require.NoError(t, err)
 		assert.Equal(t, 10, len(products))
 		assert.Equal(t, int64(10), result.TotalItems)
@@ -501,7 +498,7 @@ func TestMemoryExecutor_EdgeCases(t *testing.T) {
 		q, _ := p.Parse()
 
 		var products []Product
-		result, err := emptyExecutor.Execute(ctx, q, &products)
+		result, err := emptyExecutor.Execute(ctx, q, "", &products)
 		require.NoError(t, err)
 		assert.Equal(t, 0, len(products))
 		assert.Equal(t, int64(0), result.TotalItems)
@@ -512,7 +509,7 @@ func TestMemoryExecutor_EdgeCases(t *testing.T) {
 		q, _ := p.Parse()
 
 		var products []Product
-		_, err := executor.Execute(ctx, q, &products)
+		_, err := executor.Execute(ctx, q, "", &products)
 		require.NoError(t, err)
 		assert.Equal(t, 2, len(products))
 	})
@@ -522,7 +519,7 @@ func TestMemoryExecutor_EdgeCases(t *testing.T) {
 		q, _ := p.Parse()
 
 		var products []Product
-		_, err := executor.Execute(ctx, q, &products)
+		_, err := executor.Execute(ctx, q, "", &products)
 		require.NoError(t, err)
 		assert.Equal(t, 0, len(products))
 	})
@@ -543,7 +540,7 @@ func TestMemoryExecutor_ComplexQueries(t *testing.T) {
 		q, _ := p.Parse()
 
 		var products []Product
-		_, err := executor.Execute(ctx, q, &products)
+		_, err := executor.Execute(ctx, q, "", &products)
 		require.NoError(t, err)
 		assert.Greater(t, len(products), 0)
 		assert.LessOrEqual(t, len(products), 5)
@@ -563,7 +560,7 @@ func TestMemoryExecutor_ComplexQueries(t *testing.T) {
 		q, _ := p.Parse()
 
 		var products []Product
-		_, err := executor.Execute(ctx, q, &products)
+		_, err := executor.Execute(ctx, q, "", &products)
 		require.NoError(t, err)
 
 		for _, product := range products {

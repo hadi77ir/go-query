@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/hadi77ir/go-query/parser"
-	"github.com/hadi77ir/go-query/query"
+	"github.com/hadi77ir/go-query/v2/parser"
+	"github.com/hadi77ir/go-query/v2/query"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -35,7 +35,7 @@ func TestMemoryExecutor_DataSource(t *testing.T) {
 		require.NoError(t, err)
 
 		var results1 []Product
-		result1, err := executor.Execute(ctx, q, &results1)
+		result1, err := executor.Execute(ctx, q, "", &results1)
 		require.NoError(t, err)
 		assert.Equal(t, int64(1), result1.TotalItems)
 		assert.Equal(t, "Mouse", results1[0].Name)
@@ -45,7 +45,7 @@ func TestMemoryExecutor_DataSource(t *testing.T) {
 
 		// Second query - should now find both Mouse and Keyboard
 		var results2 []Product
-		result2, err := executor.Execute(ctx, q, &results2)
+		result2, err := executor.Execute(ctx, q, "", &results2)
 		require.NoError(t, err)
 		assert.Equal(t, int64(2), result2.TotalItems)
 
@@ -72,7 +72,7 @@ func TestMemoryExecutor_DataSource(t *testing.T) {
 		require.NoError(t, err)
 
 		var results []Product
-		result, err := executor.Execute(ctx, q, &results)
+		result, err := executor.Execute(ctx, q, "", &results)
 		require.NoError(t, err)
 		assert.Equal(t, int64(1), result.TotalItems)
 		assert.Equal(t, "Mouse", results[0].Name)
@@ -99,7 +99,7 @@ func TestMemoryExecutor_DataSource(t *testing.T) {
 		require.NoError(t, err)
 
 		var results []map[string]interface{}
-		result, err := executor.Execute(ctx, q, &results)
+		result, err := executor.Execute(ctx, q, "", &results)
 		require.NoError(t, err)
 		assert.Equal(t, int64(1), result.TotalItems)
 
@@ -108,7 +108,7 @@ func TestMemoryExecutor_DataSource(t *testing.T) {
 
 		// Query again - should see new data
 		results = []map[string]interface{}{}
-		result, err = executor.Execute(ctx, q, &results)
+		result, err = executor.Execute(ctx, q, "", &results)
 		require.NoError(t, err)
 		assert.Equal(t, int64(2), result.TotalItems)
 	})
@@ -144,13 +144,13 @@ func TestMemoryExecutor_DataSource(t *testing.T) {
 
 		// First execution - 1 result
 		var results1 []Product
-		result1, err := executor.Execute(ctx, q, &results1)
+		result1, err := executor.Execute(ctx, q, "", &results1)
 		require.NoError(t, err)
 		assert.Equal(t, int64(1), result1.TotalItems)
 
 		// Second execution - 2 results (data source returns more data)
 		var results2 []Product
-		result2, err := executor.Execute(ctx, q, &results2)
+		result2, err := executor.Execute(ctx, q, "", &results2)
 		require.NoError(t, err)
 		assert.Equal(t, int64(2), result2.TotalItems)
 	})
@@ -189,7 +189,7 @@ func TestMemoryExecutor_DataSource(t *testing.T) {
 		require.NoError(t, err)
 
 		var results []Product
-		result, err := executor.Execute(ctx, q, &results)
+		result, err := executor.Execute(ctx, q, "", &results)
 		require.NoError(t, err)
 		assert.Equal(t, int64(1), result.TotalItems)
 	})
@@ -226,7 +226,7 @@ func TestMemoryExecutor_LiveDataUpdates(t *testing.T) {
 
 		// Query 1 - 2 items in stock
 		var results1 []Product
-		result1, err := executor.Execute(ctx, q, &results1)
+		result1, err := executor.Execute(ctx, q, "", &results1)
 		require.NoError(t, err)
 		assert.Equal(t, int64(2), result1.TotalItems)
 
@@ -235,7 +235,7 @@ func TestMemoryExecutor_LiveDataUpdates(t *testing.T) {
 
 		// Query 2 - only 1 item in stock now
 		var results2 []Product
-		result2, err := executor.Execute(ctx, q, &results2)
+		result2, err := executor.Execute(ctx, q, "", &results2)
 		require.NoError(t, err)
 		assert.Equal(t, int64(1), result2.TotalItems)
 		assert.Equal(t, "Item1", results2[0].Name)
@@ -245,7 +245,7 @@ func TestMemoryExecutor_LiveDataUpdates(t *testing.T) {
 
 		// Query 3 - 2 items in stock now
 		var results3 []Product
-		result3, err := executor.Execute(ctx, q, &results3)
+		result3, err := executor.Execute(ctx, q, "", &results3)
 		require.NoError(t, err)
 		assert.Equal(t, int64(2), result3.TotalItems)
 	})

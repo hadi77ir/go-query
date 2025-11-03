@@ -206,7 +206,7 @@ q, err := cache.Parse(queryStr)
 parseTime := time.Since(start)
 
 start = time.Now()
-result, err := executor.Execute(ctx, q, &results)
+result, err := executor.Execute(ctx, q, "", &results)
 execTime := time.Since(start)
 
 fmt.Printf("Parse: %v, Execute: %v\n", parseTime, execTime)

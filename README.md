@@ -19,16 +19,16 @@ A modular, production-ready query library for Golang with a powerful, Google-lik
 
 ```bash
 # Core library
-go get github.com/hadi77ir/go-query
+go get github.com/hadi77ir/go-query/v2
 
 # MongoDB executor (optional - separate module)
-go get github.com/hadi77ir/go-query/executors/mongodb
+go get github.com/hadi77ir/go-query/v2/executors/mongodb
 
 # GORM executor for SQL databases (optional - separate module)
-go get github.com/hadi77ir/go-query/executors/gorm
+go get github.com/hadi77ir/go-query/v2/executors/gorm
 
 # Memory executor for in-memory slices/maps (optional - separate module)
-go get github.com/hadi77ir/go-query/executors/memory
+go get github.com/hadi77ir/go-query/v2/executors/memory
 ```
 
 ## Quick Start
@@ -37,9 +37,9 @@ go get github.com/hadi77ir/go-query/executors/memory
 
 ```go
 import (
-    "github.com/hadi77ir/go-query/executors/mongodb"
-    "github.com/hadi77ir/go-query/parser"
-    "github.com/hadi77ir/go-query/query"
+    "github.com/hadi77ir/go-query/v2/executors/mongodb"
+    "github.com/hadi77ir/go-query/v2/parser"
+    "github.com/hadi77ir/go-query/v2/query"
 )
 
 // Create parser cache (recommended for production)
@@ -59,7 +59,7 @@ q, _ := cache.Parse(`wireless mouse price < 100`)
 
 // Execute - results go directly into your slice
 var products []bson.M
-result, _ := executor.Execute(ctx, q, &products)
+result, _ := executor.Execute(ctx, q, "", &products)
 
 fmt.Printf("Found %d products\n", result.TotalItems)
 ```
@@ -76,7 +76,7 @@ cache := parser.NewParserCache(100)
 q, _ := cache.Parse(`john active`)  // Searches name for "john" and "active"
 
 var users []User
-result, _ := executor.Execute(ctx, q, &users)
+result, _ := executor.Execute(ctx, q, "", &users)
 ```
 
 ### Memory/In-Memory Example
@@ -95,7 +95,7 @@ cache := parser.NewParserCache(50)
 q, _ := cache.Parse(`price < 50 and category = electronics`)
 
 var results []Product
-result, _ := executor.Execute(ctx, q, &results)
+result, _ := executor.Execute(ctx, q, "", &results)
 // No database needed!
 ```
 
@@ -185,9 +185,43 @@ type Result struct {
 
 // Data is stored directly in your slice variable!
 var users []User
-result, _ := executor.Execute(ctx, q, &users)
+result, _ := executor.Execute(ctx, q, "", &users)
 // users now contains the results
+
+// Use cursor for pagination
+if result.NextPageCursor != "" {
+    var nextPage []User
+    executor.Execute(ctx, q, result.NextPageCursor, &nextPage)
+}
 ```
+
+## Count Method
+
+Get the total number of matching items without fetching data:
+
+```go
+// Parse query
+q, _ := cache.Parse("category = electronics and price > 100")
+
+// Get count (ignores pagination)
+count, err := executor.Count(ctx, q)
+if err != nil {
+    // Handle error
+}
+
+fmt.Printf("Found %d matching products\n", count)
+
+// Count matches result.TotalItems from Execute
+var products []Product
+result, _ := executor.Execute(ctx, q, "", &products)
+fmt.Printf("TotalItems: %d (same as count: %d)\n", result.TotalItems, count)
+```
+
+**Key Points:**
+- Returns total count of **all** matching items (ignores pagination)
+- Always matches `result.TotalItems` from `Execute` with the same query
+- More efficient when you only need the count without data
+- Available on all executors (GORM, MongoDB, Memory, Wrapper)
 
 ## License
 

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hadi77ir/go-query/parser"
-	"github.com/hadi77ir/go-query/query"
+	"github.com/hadi77ir/go-query/v2/parser"
+	"github.com/hadi77ir/go-query/v2/query"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -30,7 +30,7 @@ func TestMemoryExecutor_MapsComprehensive(t *testing.T) {
 		require.NoError(t, err)
 
 		var results []map[string]interface{}
-		result, err := executor.Execute(context.Background(), q, &results)
+		result, err := executor.Execute(context.Background(), q, "", &results)
 		require.NoError(t, err)
 		assert.Equal(t, int64(2), result.TotalItems)
 		assert.Equal(t, 2, len(results))
@@ -49,7 +49,7 @@ func TestMemoryExecutor_MapsComprehensive(t *testing.T) {
 		q, _ := p.Parse()
 
 		var results []map[string]interface{}
-		result, _ := executor.Execute(context.Background(), q, &results)
+		result, _ := executor.Execute(context.Background(), q, "", &results)
 		assert.Equal(t, int64(2), result.TotalItems)
 	})
 
@@ -67,7 +67,7 @@ func TestMemoryExecutor_MapsComprehensive(t *testing.T) {
 		q, _ := p.Parse()
 
 		var results []map[string]interface{}
-		result, _ := executor.Execute(context.Background(), q, &results)
+		result, _ := executor.Execute(context.Background(), q, "", &results)
 		assert.Equal(t, int64(1), result.TotalItems)
 		assert.Equal(t, "B", results[0]["product"])
 	})
@@ -86,7 +86,7 @@ func TestMemoryExecutor_MapsComprehensive(t *testing.T) {
 		q, _ := p.Parse()
 
 		var results []map[string]interface{}
-		result, _ := executor.Execute(context.Background(), q, &results)
+		result, _ := executor.Execute(context.Background(), q, "", &results)
 		assert.Equal(t, int64(3), result.TotalItems)
 	})
 
@@ -106,15 +106,14 @@ func TestMemoryExecutor_MapsComprehensive(t *testing.T) {
 		q, _ := p.Parse()
 
 		var page1 []map[string]interface{}
-		result1, _ := executor.Execute(context.Background(), q, &page1)
+		result1, _ := executor.Execute(context.Background(), q, "", &page1)
 		assert.Equal(t, 2, len(page1))
 		assert.Equal(t, int64(5), result1.TotalItems)
 		assert.NotEmpty(t, result1.NextPageCursor)
 
 		// Second page
-		q.Cursor = result1.NextPageCursor
 		var page2 []map[string]interface{}
-		_, _ = executor.Execute(context.Background(), q, &page2)
+		_, _ = executor.Execute(context.Background(), q, result1.NextPageCursor, &page2)
 		assert.Equal(t, 2, len(page2))
 	})
 
@@ -134,7 +133,7 @@ func TestMemoryExecutor_MapsComprehensive(t *testing.T) {
 
 		// Query 1 - one item in stock
 		var results1 []map[string]interface{}
-		result1, _ := executor.Execute(context.Background(), q, &results1)
+		result1, _ := executor.Execute(context.Background(), q, "", &results1)
 		assert.Equal(t, int64(1), result1.TotalItems)
 
 		// Update inventory
@@ -142,7 +141,7 @@ func TestMemoryExecutor_MapsComprehensive(t *testing.T) {
 
 		// Query 2 - two items in stock
 		var results2 []map[string]interface{}
-		result2, _ := executor.Execute(context.Background(), q, &results2)
+		result2, _ := executor.Execute(context.Background(), q, "", &results2)
 		assert.Equal(t, int64(2), result2.TotalItems)
 	})
 
@@ -168,7 +167,7 @@ func TestMemoryExecutor_MapsComprehensive(t *testing.T) {
 		q, _ := p.Parse()
 
 		var results []map[string]interface{}
-		result, _ := executor.Execute(context.Background(), q, &results)
+		result, _ := executor.Execute(context.Background(), q, "", &results)
 		assert.Equal(t, int64(1), result.TotalItems)
 		assert.Equal(t, "john", results[0]["user"])
 	})
@@ -186,7 +185,7 @@ func TestMemoryExecutor_MapsComprehensive(t *testing.T) {
 		q, _ := p.Parse()
 
 		var results []map[string]interface{}
-		result, _ := executor.Execute(context.Background(), q, &results)
+		result, _ := executor.Execute(context.Background(), q, "", &results)
 		assert.Equal(t, int64(1), result.TotalItems)
 	})
 
@@ -206,7 +205,7 @@ func TestMemoryExecutor_MapsComprehensive(t *testing.T) {
 		q, _ := p.Parse()
 
 		var results []map[string]interface{}
-		result, _ := executor.Execute(context.Background(), q, &results)
+		result, _ := executor.Execute(context.Background(), q, "", &results)
 		assert.Equal(t, int64(1), result.TotalItems)
 		assert.Equal(t, "Wireless Mouse", results[0]["name"])
 	})
@@ -249,7 +248,7 @@ func ExampleMemoryExecutor_mapsUsage() {
 	q, _ := p.Parse()
 
 	var results []map[string]interface{}
-	result, _ := executor.Execute(context.Background(), q, &results)
+	result, _ := executor.Execute(context.Background(), q, "", &results)
 
 	fmt.Printf("Found %d active users\n", result.TotalItems)
 	for _, user := range results {

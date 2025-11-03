@@ -128,5 +128,4 @@ type Query struct {
 	SortBy    string
 	SortOrder SortOrder
 	PageSize  int
-	Cursor    string
 }

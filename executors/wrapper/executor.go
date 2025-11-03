@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hadi77ir/go-query/executor"
-	"github.com/hadi77ir/go-query/query"
+	"github.com/hadi77ir/go-query/v2/executor"
+	"github.com/hadi77ir/go-query/v2/query"
 )
 
 // WrapperExecutor wraps another executor and imposes additional field restrictions
@@ -44,14 +44,27 @@ func (e *WrapperExecutor) Close() error {
 // Execute runs the query and stores results in dest
 // It validates all fields in the query against the wrapper's allowed fields list
 // before delegating to the inner executor
-func (e *WrapperExecutor) Execute(ctx context.Context, q *query.Query, dest interface{}) (*query.Result, error) {
+func (e *WrapperExecutor) Execute(ctx context.Context, q *query.Query, cursor string, dest interface{}) (*query.Result, error) {
 	// Validate all fields in the query
 	if err := e.validateQueryFields(q); err != nil {
 		return nil, err
 	}
 
 	// Delegate to inner executor (which will also validate its own allowed fields)
-	return e.innerExecutor.Execute(ctx, q, dest)
+	return e.innerExecutor.Execute(ctx, q, cursor, dest)
+}
+
+// Count returns the total number of items that would be returned by the given query
+// It validates all fields in the query against the wrapper's allowed fields list
+// before delegating to the inner executor
+func (e *WrapperExecutor) Count(ctx context.Context, q *query.Query) (int64, error) {
+	// Validate all fields in the query
+	if err := e.validateQueryFields(q); err != nil {
+		return 0, err
+	}
+
+	// Delegate to inner executor
+	return e.innerExecutor.Count(ctx, q)
 }
 
 // validateQueryFields traverses the query AST and validates all field references

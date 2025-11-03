@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hadi77ir/go-query/parser"
-	"github.com/hadi77ir/go-query/query"
+	"github.com/hadi77ir/go-query/v2/parser"
+	"github.com/hadi77ir/go-query/v2/query"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/bson"
@@ -92,7 +92,6 @@ func TestMongoExecutor_CursorPaginationLargeDataset(t *testing.T) {
 
 	t.Run("forward pagination through all pages", func(t *testing.T) {
 		var allPages [][]bson.M
-		var cursors []string
 		currentCursor := ""
 
 		// Navigate forward through all pages
@@ -102,12 +101,8 @@ func TestMongoExecutor_CursorPaginationLargeDataset(t *testing.T) {
 			q, err := p.Parse()
 			require.NoError(t, err)
 
-			if currentCursor != "" {
-				q.Cursor = currentCursor
-			}
-
 			var page []bson.M
-			result, err := executor.Execute(ctx, q, &page)
+			result, err := executor.Execute(ctx, q, currentCursor, &page)
 			require.NoError(t, err, "Page should execute successfully")
 
 			if len(page) == 0 {
@@ -115,7 +110,6 @@ func TestMongoExecutor_CursorPaginationLargeDataset(t *testing.T) {
 			}
 
 			allPages = append(allPages, page)
-			cursors = append(cursors, result.NextPageCursor)
 
 			if result.NextPageCursor == "" {
 				break // Last page
@@ -157,20 +151,17 @@ func TestMongoExecutor_CursorPaginationLargeDataset(t *testing.T) {
 		q, _ := p.Parse()
 
 		var page1 []bson.M
-		result1, _ := executor.Execute(ctx, q, &page1)
-		q.Cursor = result1.NextPageCursor
+		result1, _ := executor.Execute(ctx, q, "", &page1)
 
 		var page2 []bson.M
-		result2, _ := executor.Execute(ctx, q, &page2)
-		q.Cursor = result2.NextPageCursor
+		result2, _ := executor.Execute(ctx, q, result1.NextPageCursor, &page2)
 
 		var page3 []bson.M
-		result3, _ := executor.Execute(ctx, q, &page3)
+		result3, _ := executor.Execute(ctx, q, result2.NextPageCursor, &page3)
 
 		// Now go backward
-		q.Cursor = result3.PrevPageCursor
 		var backToPage2 []bson.M
-		resultBack, err := executor.Execute(ctx, q, &backToPage2)
+		resultBack, err := executor.Execute(ctx, q, result3.PrevPageCursor, &backToPage2)
 		require.NoError(t, err)
 
 		// Verify we're back at page 2 - cursor pagination may not preserve exact boundaries
@@ -182,9 +173,8 @@ func TestMongoExecutor_CursorPaginationLargeDataset(t *testing.T) {
 		assert.NotEmpty(t, backToPage2[len(backToPage2)-1]["_id"])
 
 		// Go back one more page
-		q.Cursor = resultBack.PrevPageCursor
 		var backToPage1 []bson.M
-		resultBackTo1, err := executor.Execute(ctx, q, &backToPage1)
+		resultBackTo1, err := executor.Execute(ctx, q, resultBack.PrevPageCursor, &backToPage1)
 		require.NoError(t, err)
 
 		assert.Equal(t, len(page1), len(backToPage1))
@@ -203,17 +193,15 @@ func TestMongoExecutor_CursorPaginationLargeDataset(t *testing.T) {
 		q, _ := p.Parse()
 
 		var page1 []bson.M
-		result1, _ := executor.Execute(ctx, q, &page1)
+		result1, _ := executor.Execute(ctx, q, "", &page1)
 		cursor := result1.NextPageCursor
 
 		// Use same cursor multiple times - should get same results
 		var page2a []bson.M
-		q.Cursor = cursor
-		result2a, _ := executor.Execute(ctx, q, &page2a)
+		result2a, _ := executor.Execute(ctx, q, cursor, &page2a)
 
 		var page2b []bson.M
-		q.Cursor = cursor
-		result2b, _ := executor.Execute(ctx, q, &page2b)
+		result2b, _ := executor.Execute(ctx, q, cursor, &page2b)
 
 		// Results should be identical
 		assert.Equal(t, len(page2a), len(page2b))
@@ -230,7 +218,7 @@ func TestMongoExecutor_CursorPaginationLargeDataset(t *testing.T) {
 
 		// First page
 		var firstPage []bson.M
-		resultFirst, _ := executor.Execute(ctx, q, &firstPage)
+		resultFirst, _ := executor.Execute(ctx, q, "", &firstPage)
 		assert.NotEmpty(t, resultFirst.NextPageCursor, "First page should have next cursor")
 		assert.Empty(t, resultFirst.PrevPageCursor, "First page should not have prev cursor")
 		assert.Equal(t, 1, resultFirst.ShowingFrom)
@@ -238,10 +226,9 @@ func TestMongoExecutor_CursorPaginationLargeDataset(t *testing.T) {
 
 		// Navigate to last page
 		currentCursor := resultFirst.NextPageCursor
+		var page []bson.M
 		for {
-			q.Cursor = currentCursor
-			var page []bson.M
-			result, _ := executor.Execute(ctx, q, &page)
+			result, _ := executor.Execute(ctx, q, currentCursor, &page)
 
 			if result.NextPageCursor == "" {
 				// Last page
@@ -269,12 +256,8 @@ func TestMongoExecutor_CursorPaginationLargeDataset(t *testing.T) {
 		currentCursor := ""
 
 		for {
-			if currentCursor != "" {
-				q.Cursor = currentCursor
-			}
-
 			var page []bson.M
-			result, err := executor.Execute(ctx, q, &page)
+			result, err := executor.Execute(ctx, q, currentCursor, &page)
 			require.NoError(t, err)
 
 			if len(page) == 0 {
@@ -302,10 +285,10 @@ func TestMongoExecutor_CursorPaginationLargeDataset(t *testing.T) {
 		}
 
 		// Get total count without pagination
-		q.Cursor = ""
+		// cursor: "" (empty, using default)
 		q.PageSize = 0 // Get all
 		var allFiltered []bson.M
-		resultAll, _ := executor.Execute(ctx, q, &allFiltered)
+		resultAll, _ := executor.Execute(ctx, q, "", &allFiltered)
 		assert.Equal(t, int64(totalFiltered), resultAll.TotalItems, "Should match filtered total")
 	})
 
@@ -316,7 +299,7 @@ func TestMongoExecutor_CursorPaginationLargeDataset(t *testing.T) {
 			q, _ := p.Parse()
 
 			var page1 []bson.M
-			result1, _ := executor.Execute(ctx, q, &page1)
+			result1, _ := executor.Execute(ctx, q, "", &page1)
 
 			// Verify descending order (check that IDs are different and in reverse)
 			// Note: MongoDB _id comparison is complex, so we just verify they're different
@@ -325,9 +308,8 @@ func TestMongoExecutor_CursorPaginationLargeDataset(t *testing.T) {
 			assert.NotEqual(t, firstID, lastID, "First and last IDs should be different")
 
 			// Navigate to next page
-			q.Cursor = result1.NextPageCursor
 			var page2 []bson.M
-			_, _ = executor.Execute(ctx, q, &page2)
+			_, _ = executor.Execute(ctx, q, result1.NextPageCursor, &page2)
 
 			// Verify continuity - last ID of page1 should be different from first ID of page2
 			assert.NotEqual(t, page1[len(page1)-1]["_id"], page2[0]["_id"], "Pages should have different IDs")
@@ -338,7 +320,7 @@ func TestMongoExecutor_CursorPaginationLargeDataset(t *testing.T) {
 			q, _ := p.Parse()
 
 			var page1 []bson.M
-			result1, _ := executor.Execute(ctx, q, &page1)
+			result1, _ := executor.Execute(ctx, q, "", &page1)
 
 			// Verify ascending price order
 			for i := 1; i < len(page1); i++ {
@@ -348,9 +330,8 @@ func TestMongoExecutor_CursorPaginationLargeDataset(t *testing.T) {
 			}
 
 			// Navigate forward
-			q.Cursor = result1.NextPageCursor
 			var page2 []bson.M
-			_, _ = executor.Execute(ctx, q, &page2)
+			_, _ = executor.Execute(ctx, q, result1.NextPageCursor, &page2)
 
 			// Verify continuity
 			lastPrice := page1[len(page1)-1]["price"].(float64)
@@ -364,9 +345,8 @@ func TestMongoExecutor_CursorPaginationLargeDataset(t *testing.T) {
 		q, _ := p.Parse()
 
 		// Test invalid cursor
-		q.Cursor = "invalid-cursor-string"
 		var docs []bson.M
-		_, err := executor.Execute(ctx, q, &docs)
+		_, err := executor.Execute(ctx, q, "invalid-cursor-string", &docs)
 		require.Error(t, err)
 		assert.ErrorIs(t, err, query.ErrInvalidCursor)
 	})
@@ -381,15 +361,14 @@ func TestMongoExecutor_CursorPaginationLargeDataset(t *testing.T) {
 			q.PageSize = size
 
 			var page1 []bson.M
-			result1, _ := executor.Execute(ctx, q, &page1)
+			result1, _ := executor.Execute(ctx, q, "", &page1)
 
 			assert.Equal(t, size, len(page1), "Page size %d", size)
 			assert.NotEmpty(t, result1.NextPageCursor, "Should have next cursor with page size %d", size)
 
 			// Navigate to next page
-			q.Cursor = result1.NextPageCursor
 			var page2 []bson.M
-			_, _ = executor.Execute(ctx, q, &page2)
+			_, _ = executor.Execute(ctx, q, result1.NextPageCursor, &page2)
 
 			assert.Equal(t, size, len(page2), "Second page size %d", size)
 			assert.NotEqual(t, page1[0]["_id"], page2[0]["_id"], "Pages should have different IDs")
@@ -402,15 +381,13 @@ func TestMongoExecutor_CursorPaginationLargeDataset(t *testing.T) {
 		q, _ := p.Parse()
 
 		var page1 []bson.M
-		result1, _ := executor.Execute(ctx, q, &page1)
+		result1, _ := executor.Execute(ctx, q, "", &page1)
 		cursor := result1.NextPageCursor
 
 		// Use same cursor concurrently (simulated)
 		var page2a, page2b []bson.M
-		q.Cursor = cursor
-		result2a, _ := executor.Execute(ctx, q, &page2a)
-		q.Cursor = cursor
-		result2b, _ := executor.Execute(ctx, q, &page2b)
+		result2a, _ := executor.Execute(ctx, q, cursor, &page2a)
+		result2b, _ := executor.Execute(ctx, q, cursor, &page2b)
 
 		// Results should be identical
 		assert.Equal(t, len(page2a), len(page2b))
@@ -429,12 +406,8 @@ func TestMongoExecutor_CursorPaginationLargeDataset(t *testing.T) {
 		currentCursor := ""
 
 		for {
-			if currentCursor != "" {
-				q.Cursor = currentCursor
-			}
-
 			var page []bson.M
-			result, err := executor.Execute(ctx, q, &page)
+			result, err := executor.Execute(ctx, q, currentCursor, &page)
 			require.NoError(t, err)
 
 			if len(page) == 0 {

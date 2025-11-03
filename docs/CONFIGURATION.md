@@ -84,7 +84,7 @@ opts.DefaultSearchField = "title"
 **Recommended for production**: Use `ParserCache` to cache parsed queries for maximum performance.
 
 ```go
-import "github.com/hadi77ir/go-query/parser"
+import "github.com/hadi77ir/go-query/v2/parser"
 
 // Create cache (recommended: 50-100 entries)
 cache := parser.NewParserCache(100)
@@ -187,8 +187,8 @@ executor := gorm.NewExecutor(db, &Product{}, opts)
 
 ```go
 import (
-    "github.com/hadi77ir/go-query/query"
-    "github.com/hadi77ir/go-query/executors/mongodb"
+    "github.com/hadi77ir/go-query/v2/query"
+    "github.com/hadi77ir/go-query/v2/executors/mongodb"
 )
 
 // Create custom options

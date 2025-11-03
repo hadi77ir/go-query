@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hadi77ir/go-query/parser"
-	"github.com/hadi77ir/go-query/query"
+	"github.com/hadi77ir/go-query/v2/parser"
+	"github.com/hadi77ir/go-query/v2/query"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -50,7 +50,7 @@ func TestMemoryExecutor_CustomFieldGetter(t *testing.T) {
 		q, _ := p.Parse()
 
 		var results []*CustomObject
-		result, err := executor.Execute(context.Background(), q, &results)
+		result, err := executor.Execute(context.Background(), q, "", &results)
 		require.NoError(t, err)
 		assert.Equal(t, 2, len(results))
 		assert.Equal(t, int64(2), result.TotalItems)
@@ -73,7 +73,7 @@ func TestMemoryExecutor_CustomFieldGetter(t *testing.T) {
 		q, _ := p.Parse()
 
 		var results []*CustomObject
-		result, err := executor.Execute(context.Background(), q, &results)
+		result, err := executor.Execute(context.Background(), q, "", &results)
 		require.NoError(t, err)
 		assert.Equal(t, 3, len(results))
 		assert.Equal(t, "Bob", results[0].Get("name"))     // 87
@@ -98,7 +98,7 @@ func TestMemoryExecutor_CustomFieldGetter(t *testing.T) {
 		q, _ := p.Parse()
 
 		var results []*CustomObject
-		result, err := executor.Execute(context.Background(), q, &results)
+		result, err := executor.Execute(context.Background(), q, "", &results)
 		require.NoError(t, err)
 		assert.Equal(t, 1, len(results))
 		assert.Equal(t, int64(1), result.TotalItems)
@@ -120,7 +120,7 @@ func TestMemoryExecutor_CustomFieldGetter(t *testing.T) {
 		q, _ := p.Parse()
 
 		var results []*CustomObject
-		_, err := executor.Execute(context.Background(), q, &results)
+		_, err := executor.Execute(context.Background(), q, "", &results)
 		require.Error(t, err)
 		assert.True(t, errors.Is(err, query.ErrFieldNotAllowed))
 		// Verify field name is in error
@@ -197,7 +197,7 @@ func TestMemoryExecutor_CustomFieldGetter_NestedAccess(t *testing.T) {
 		q, _ := p.Parse()
 
 		var results []NestedData
-		result, err := executor.Execute(context.Background(), q, &results)
+		result, err := executor.Execute(context.Background(), q, "", &results)
 		require.NoError(t, err)
 		assert.Equal(t, 1, len(results))
 		assert.Equal(t, "Alice", results[0].User.Name)
@@ -229,7 +229,7 @@ func TestMemoryExecutor_FieldGetter_ErrorHandling(t *testing.T) {
 		q, _ := p.Parse()
 
 		var results []*CustomObject
-		_, err := executor.Execute(context.Background(), q, &results)
+		_, err := executor.Execute(context.Background(), q, "", &results)
 		require.Error(t, err)
 		// Check for execution error from custom field getter
 		var execErr *query.ExecutionError
@@ -254,7 +254,7 @@ func TestMemoryExecutor_FieldGetter_ErrorHandling(t *testing.T) {
 		q, _ := p.Parse()
 
 		var results []User
-		result, err := executor.Execute(context.Background(), q, &results)
+		result, err := executor.Execute(context.Background(), q, "", &results)
 		require.NoError(t, err)
 		assert.Equal(t, 1, len(results))
 		assert.Equal(t, int64(1), result.TotalItems)

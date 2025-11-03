@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/hadi77ir/go-query/parser"
-	"github.com/hadi77ir/go-query/query"
+	"github.com/hadi77ir/go-query/v2/parser"
+	"github.com/hadi77ir/go-query/v2/query"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -35,7 +35,7 @@ func TestMemoryExecutor_AllowedFields(t *testing.T) {
 		q, _ := p.Parse()
 
 		var results []User
-		result, err := executor.Execute(context.Background(), q, &results)
+		result, err := executor.Execute(context.Background(), q, "", &results)
 		require.NoError(t, err)
 		assert.Equal(t, 1, len(results))
 		assert.Equal(t, "Alice", results[0].Name)
@@ -54,7 +54,7 @@ func TestMemoryExecutor_AllowedFields(t *testing.T) {
 		q, _ := p.Parse()
 
 		var results []User
-		result, err := executor.Execute(context.Background(), q, &results)
+		result, err := executor.Execute(context.Background(), q, "", &results)
 		require.NoError(t, err)
 		assert.Equal(t, 1, len(results))
 		assert.Equal(t, "Bob", results[0].Name)
@@ -74,7 +74,7 @@ func TestMemoryExecutor_AllowedFields(t *testing.T) {
 		q, _ := p.Parse()
 
 		var results []User
-		_, err := executor.Execute(context.Background(), q, &results)
+		_, err := executor.Execute(context.Background(), q, "", &results)
 		require.Error(t, err)
 		assert.True(t, errors.Is(err, query.ErrFieldNotAllowed))
 		// Verify field name is in error
@@ -94,7 +94,7 @@ func TestMemoryExecutor_AllowedFields(t *testing.T) {
 		q, _ := p.Parse()
 
 		var results []User
-		_, err := executor.Execute(context.Background(), q, &results)
+		_, err := executor.Execute(context.Background(), q, "", &results)
 		require.Error(t, err)
 		assert.True(t, errors.Is(err, query.ErrFieldNotAllowed))
 		// Verify field name is in error
@@ -114,7 +114,7 @@ func TestMemoryExecutor_AllowedFields(t *testing.T) {
 		q, _ := p.Parse()
 
 		var results []User
-		_, err := executor.Execute(context.Background(), q, &results)
+		_, err := executor.Execute(context.Background(), q, "", &results)
 		require.Error(t, err)
 		assert.True(t, errors.Is(err, query.ErrFieldNotAllowed))
 		// Verify field name is in error
@@ -135,7 +135,7 @@ func TestMemoryExecutor_AllowedFields(t *testing.T) {
 		q, _ := p.Parse()
 
 		var results []User
-		_, err := executor.Execute(context.Background(), q, &results)
+		_, err := executor.Execute(context.Background(), q, "", &results)
 		require.Error(t, err)
 		assert.True(t, errors.Is(err, query.ErrFieldNotAllowed))
 		// Verify field name is in error
@@ -155,7 +155,7 @@ func TestMemoryExecutor_AllowedFields(t *testing.T) {
 		q, _ := p.Parse()
 
 		var results []User
-		result, err := executor.Execute(context.Background(), q, &results)
+		result, err := executor.Execute(context.Background(), q, "", &results)
 		require.NoError(t, err)
 		assert.Equal(t, 3, len(results))
 		assert.Equal(t, "Alice", results[0].Name)
@@ -177,7 +177,7 @@ func TestMemoryExecutor_MapWithAllowedFields(t *testing.T) {
 		q, _ := p.Parse()
 
 		var results []map[string]interface{}
-		result, err := executor.Execute(context.Background(), q, &results)
+		result, err := executor.Execute(context.Background(), q, "", &results)
 		require.NoError(t, err)
 		assert.Equal(t, 1, len(results))
 		assert.Equal(t, int64(1), result.TotalItems)
@@ -193,7 +193,7 @@ func TestMemoryExecutor_MapWithAllowedFields(t *testing.T) {
 		q, _ := p.Parse()
 
 		var results []map[string]interface{}
-		result, err := executor.Execute(context.Background(), q, &results)
+		result, err := executor.Execute(context.Background(), q, "", &results)
 		require.NoError(t, err)
 		assert.Equal(t, 1, len(results))
 		assert.Equal(t, int64(1), result.TotalItems)
@@ -209,7 +209,7 @@ func TestMemoryExecutor_MapWithAllowedFields(t *testing.T) {
 		q, _ := p.Parse()
 
 		var results []map[string]interface{}
-		_, err := executor.Execute(context.Background(), q, &results)
+		_, err := executor.Execute(context.Background(), q, "", &results)
 		require.Error(t, err)
 		assert.True(t, errors.Is(err, query.ErrFieldNotAllowed))
 	})

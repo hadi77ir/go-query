@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hadi77ir/go-query/executor"
-	"github.com/hadi77ir/go-query/internal/cursor"
-	"github.com/hadi77ir/go-query/query"
+	"github.com/hadi77ir/go-query/v2/executor"
+	"github.com/hadi77ir/go-query/v2/internal/cursor"
+	"github.com/hadi77ir/go-query/v2/query"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -47,7 +47,7 @@ func (e *Executor) Close() error {
 
 // Execute runs the query and stores results in dest
 // dest must be a pointer to a slice (e.g., &[]MyStruct{} or &[]bson.M{})
-func (e *Executor) Execute(ctx context.Context, q *query.Query, dest interface{}) (*query.Result, error) {
+func (e *Executor) Execute(ctx context.Context, q *query.Query, cursorParam string, dest interface{}) (*query.Result, error) {
 	result := &query.Result{}
 
 	// Validate and adjust page size
@@ -65,7 +65,7 @@ func (e *Executor) Execute(ctx context.Context, q *query.Query, dest interface{}
 	}
 
 	// Handle cursor-based pagination
-	cursorData, err := cursor.Decode(q.Cursor)
+	cursorData, err := cursor.Decode(cursorParam)
 	if err != nil {
 		result.Error = fmt.Errorf("%w: %v", query.ErrInvalidCursor, err)
 		return result, result.Error
@@ -494,4 +494,26 @@ func (e *Executor) convertArrayValue(val interface{}) []interface{} {
 		return result
 	}
 	return []interface{}{e.convertValue(val)}
+}
+
+// Count returns the total number of items that would be returned by the given query
+// This does not apply pagination - it counts all matching items
+func (e *Executor) Count(ctx context.Context, q *query.Query) (int64, error) {
+	// Build MongoDB filter
+	filter := bson.M{}
+	if q.Filter != nil {
+		var err error
+		filter, err = e.buildFilter(q.Filter)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	// Count total items
+	totalItems, err := e.collection.CountDocuments(ctx, filter)
+	if err != nil {
+		return 0, query.NewExecutionError("count documents", err)
+	}
+
+	return totalItems, nil
 }

@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hadi77ir/go-query/internal/cursor"
-	"github.com/hadi77ir/go-query/query"
+	"github.com/hadi77ir/go-query/v2/internal/cursor"
+	"github.com/hadi77ir/go-query/v2/query"
 )
 
 // FieldGetterFunc is a function that retrieves a field value from an object
@@ -110,7 +110,7 @@ func NewExecutorWithDataSourceAndOptions(dataSource DataSourceFunc, opts *Memory
 }
 
 // Execute runs the query on the in-memory data
-func (e *MemoryExecutor) Execute(ctx context.Context, q *query.Query, dest interface{}) (*query.Result, error) {
+func (e *MemoryExecutor) Execute(ctx context.Context, q *query.Query, cursorParam string, dest interface{}) (*query.Result, error) {
 	// Validate destination
 	destVal := reflect.ValueOf(dest)
 	if destVal.Kind() != reflect.Ptr || destVal.Elem().Kind() != reflect.Slice {
@@ -169,8 +169,8 @@ func (e *MemoryExecutor) Execute(ctx context.Context, q *query.Query, dest inter
 		}
 		// Use seed from cursor or generate new one
 		seed := int64(42) // Default seed
-		if q.Cursor != "" {
-			cursorData, err := cursor.Decode(q.Cursor)
+		if cursorParam != "" {
+			cursorData, err := cursor.Decode(cursorParam)
 			if err == nil && cursorData != nil && cursorData.RandomSeed != 0 {
 				seed = cursorData.RandomSeed
 			}
@@ -185,8 +185,8 @@ func (e *MemoryExecutor) Execute(ctx context.Context, q *query.Query, dest inter
 	pageSize := e.options.ValidatePageSize(q.PageSize)
 
 	startIdx := 0
-	if q.Cursor != "" {
-		cursorData, err := cursor.Decode(q.Cursor)
+	if cursorParam != "" {
+		cursorData, err := cursor.Decode(cursorParam)
 		if err != nil {
 			return nil, fmt.Errorf("%w: %v", query.ErrInvalidCursor, err)
 		}
@@ -616,4 +616,42 @@ func (e *MemoryExecutor) Name() string {
 // Close does nothing for memory executor
 func (e *MemoryExecutor) Close() error {
 	return nil
+}
+
+// Count returns the total number of items that would be returned by the given query
+// This does not apply pagination - it counts all matching items
+func (e *MemoryExecutor) Count(ctx context.Context, q *query.Query) (int64, error) {
+	// Get source data from the data source function
+	data := e.dataSource()
+	dataVal := reflect.ValueOf(data)
+	if dataVal.Kind() == reflect.Ptr {
+		dataVal = dataVal.Elem()
+	}
+	if dataVal.Kind() != reflect.Slice {
+		return 0, query.ErrInvalidQuery
+	}
+
+	// Filter data
+	filtered := []reflect.Value{}
+	for i := 0; i < dataVal.Len(); i++ {
+		item := dataVal.Index(i)
+		if q.Filter == nil {
+			filtered = append(filtered, item)
+		} else {
+			match, err := e.evaluateFilter(q.Filter, item)
+			if err != nil {
+				// If error is already an ExecutionError, preserve it
+				var execErr *query.ExecutionError
+				if errors.As(err, &execErr) {
+					return 0, err
+				}
+				return 0, query.NewExecutionError("evaluate filter", err)
+			}
+			if match {
+				filtered = append(filtered, item)
+			}
+		}
+	}
+
+	return int64(len(filtered)), nil
 }

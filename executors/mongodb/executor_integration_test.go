@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hadi77ir/go-query/parser"
-	"github.com/hadi77ir/go-query/query"
+	"github.com/hadi77ir/go-query/v2/parser"
+	"github.com/hadi77ir/go-query/v2/query"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -154,7 +154,7 @@ func TestMongoExecutor_BasicComparisons(t *testing.T) {
 			require.NoError(t, err)
 
 			var docs []bson.M
-			result, err := executor.Execute(ctx, q, &docs)
+			result, err := executor.Execute(ctx, q, "", &docs)
 			require.NoError(t, err)
 			assert.Equal(t, tt.expectedCount, len(docs), "Query: %s", tt.query)
 			assert.Equal(t, int64(tt.expectedCount), result.TotalItems)
@@ -229,7 +229,7 @@ func TestMongoExecutor_StringMatching(t *testing.T) {
 			require.NoError(t, err)
 
 			var docs []bson.M
-			_, err = executor.Execute(ctx, q, &docs)
+			_, err = executor.Execute(ctx, q, "", &docs)
 			require.NoError(t, err)
 			assert.Equal(t, tt.expectedCount, len(docs), "Query: %s", tt.query)
 		})
@@ -284,7 +284,7 @@ func TestMongoExecutor_ArrayOperations(t *testing.T) {
 			require.NoError(t, err)
 
 			var docs []bson.M
-			_, err = executor.Execute(ctx, q, &docs)
+			_, err = executor.Execute(ctx, q, "", &docs)
 			if tt.expectedCount != 0 {
 				require.NoError(t, err)
 			} else {
@@ -343,7 +343,7 @@ func TestMongoExecutor_LogicalOperators(t *testing.T) {
 			require.NoError(t, err)
 
 			var docs []bson.M
-			_, err = executor.Execute(ctx, q, &docs)
+			_, err = executor.Execute(ctx, q, "", &docs)
 			require.NoError(t, err)
 			assert.Equal(t, tt.expectedCount, len(docs), "Query: %s", tt.query)
 		})
@@ -400,7 +400,7 @@ func TestMongoExecutor_BareSearch(t *testing.T) {
 			require.NoError(t, err)
 
 			var docs []bson.M
-			_, err = executor.Execute(ctx, q, &docs)
+			_, err = executor.Execute(ctx, q, "", &docs)
 			require.NoError(t, err)
 			assert.Equal(t, tt.expectedCount, len(docs), "Query: %s", tt.query)
 		})
@@ -420,7 +420,7 @@ func TestMongoExecutor_Pagination(t *testing.T) {
 		q, _ := p.Parse()
 
 		var docs []bson.M
-		result, err := executor.Execute(ctx, q, &docs)
+		result, err := executor.Execute(ctx, q, "", &docs)
 		require.NoError(t, err)
 
 		assert.Equal(t, 3, len(docs))
@@ -437,12 +437,11 @@ func TestMongoExecutor_Pagination(t *testing.T) {
 		p, _ := parser.NewParser("page_size = 3 sort_by = _id")
 		q, _ := p.Parse()
 		var docs1 []bson.M
-		result1, _ := executor.Execute(ctx, q, &docs1)
+		result1, _ := executor.Execute(ctx, q, "", &docs1)
 
 		// Get second page
-		q.Cursor = result1.NextPageCursor
 		var docs2 []bson.M
-		result2, err := executor.Execute(ctx, q, &docs2)
+		result2, err := executor.Execute(ctx, q, result1.NextPageCursor, &docs2)
 		require.NoError(t, err)
 
 		assert.Equal(t, 3, len(docs2))
@@ -462,12 +461,11 @@ func TestMongoExecutor_Pagination(t *testing.T) {
 
 		// Navigate to last page
 		var docs []bson.M
-		result, _ := executor.Execute(ctx, q, &docs)
+		result, _ := executor.Execute(ctx, q, "", &docs)
 
 		for result.NextPageCursor != "" {
-			q.Cursor = result.NextPageCursor
 			docs = []bson.M{}
-			result, _ = executor.Execute(ctx, q, &docs)
+			result, _ = executor.Execute(ctx, q, result.NextPageCursor, &docs)
 		}
 
 		assert.Equal(t, 1, len(docs))
@@ -483,14 +481,12 @@ func TestMongoExecutor_Pagination(t *testing.T) {
 		p, _ := parser.NewParser("page_size = 3 sort_by = _id")
 		q, _ := p.Parse()
 		var docs []bson.M
-		result, _ := executor.Execute(ctx, q, &docs)
-		q.Cursor = result.NextPageCursor
-		result, _ = executor.Execute(ctx, q, &docs)
+		result, _ := executor.Execute(ctx, q, "", &docs)
+		result, _ = executor.Execute(ctx, q, result.NextPageCursor, &docs)
 
 		// Go back to page 1
-		q.Cursor = result.PrevPageCursor
 		docs = []bson.M{}
-		prevResult, err := executor.Execute(ctx, q, &docs)
+		prevResult, err := executor.Execute(ctx, q, result.PrevPageCursor, &docs)
 		require.NoError(t, err)
 
 		assert.Equal(t, 3, len(docs))
@@ -547,7 +543,7 @@ func TestMongoExecutor_Sorting(t *testing.T) {
 			q, _ := p.Parse()
 
 			var docs []bson.M
-			_, err := executor.Execute(ctx, q, &docs)
+			_, err := executor.Execute(ctx, q, "", &docs)
 			require.NoError(t, err)
 
 			if tt.checkOrder != nil && len(docs) >= 2 {
@@ -570,7 +566,7 @@ func TestMongoExecutor_EdgeCases(t *testing.T) {
 		q, _ := p.Parse()
 
 		var docs []bson.M
-		result, err := executor.Execute(ctx, q, &docs)
+		result, err := executor.Execute(ctx, q, "", &docs)
 		require.Error(t, err, query.ErrNoRecordsFound)
 		assert.Equal(t, 0, len(docs))
 		assert.Equal(t, int64(0), result.TotalItems)
@@ -582,7 +578,7 @@ func TestMongoExecutor_EdgeCases(t *testing.T) {
 		q, _ := p.Parse()
 
 		var docs []bson.M
-		result, err := executor.Execute(ctx, q, &docs)
+		result, err := executor.Execute(ctx, q, "", &docs)
 		require.NoError(t, err)
 		assert.Equal(t, 10, len(docs))
 		assert.Equal(t, int64(10), result.TotalItems)
@@ -593,7 +589,7 @@ func TestMongoExecutor_EdgeCases(t *testing.T) {
 		q, _ := p.Parse()
 
 		var docs []bson.M
-		_, err := executor.Execute(ctx, q, &docs)
+		_, err := executor.Execute(ctx, q, "", &docs)
 		require.NoError(t, err)
 		// Should be capped at MaxPageSize (100 by default)
 		assert.LessOrEqual(t, len(docs), 100)
@@ -610,7 +606,7 @@ func TestMongoExecutor_EdgeCases(t *testing.T) {
 		q, _ := p.Parse()
 
 		var docs []bson.M
-		_, err := executor.Execute(ctx, q, &docs)
+		_, err := executor.Execute(ctx, q, "", &docs)
 		require.NoError(t, err)
 		assert.Equal(t, 1, len(docs))
 	})
@@ -626,7 +622,7 @@ func TestMongoExecutor_EdgeCases(t *testing.T) {
 		q, _ := p.Parse()
 
 		var docs []bson.M
-		_, err := executor.Execute(ctx, q, &docs)
+		_, err := executor.Execute(ctx, q, "", &docs)
 		require.NoError(t, err)
 		assert.Greater(t, len(docs), 0)
 		for _, doc := range docs {
@@ -639,7 +635,7 @@ func TestMongoExecutor_EdgeCases(t *testing.T) {
 		q, _ := p.Parse()
 
 		var docs []bson.M
-		_, err := executor.Execute(ctx, q, &docs)
+		_, err := executor.Execute(ctx, q, "", &docs)
 		// Should handle gracefully
 		assert.Error(t, err)
 	})
@@ -662,7 +658,7 @@ func TestMongoExecutor_ComplexRealWorld(t *testing.T) {
 		q, _ := p.Parse()
 
 		var docs []bson.M
-		_, err := executor.Execute(ctx, q, &docs)
+		_, err := executor.Execute(ctx, q, "", &docs)
 		require.NoError(t, err)
 		assert.Greater(t, len(docs), 0)
 		assert.LessOrEqual(t, len(docs), 5)
@@ -677,7 +673,7 @@ func TestMongoExecutor_ComplexRealWorld(t *testing.T) {
 		q, _ := p.Parse()
 
 		var docs []bson.M
-		_, err := executor.Execute(ctx, q, &docs)
+		_, err := executor.Execute(ctx, q, "", &docs)
 		require.NoError(t, err)
 		assert.Greater(t, len(docs), 0)
 
@@ -699,7 +695,7 @@ func TestMongoExecutor_ComplexRealWorld(t *testing.T) {
 		q, _ := p.Parse()
 
 		var docs []bson.M
-		_, err := executor.Execute(ctx, q, &docs)
+		_, err := executor.Execute(ctx, q, "", &docs)
 		require.NoError(t, err)
 
 		for _, doc := range docs {
@@ -718,9 +714,10 @@ func TestMongoExecutor_ComplexRealWorld(t *testing.T) {
 
 		// Get all pages
 		allDocs := []bson.M{}
+		var cursor string
 		for {
 			var docs []bson.M
-			result, err := executor.Execute(ctx, q, &docs)
+			result, err := executor.Execute(ctx, q, cursor, &docs)
 			require.NoError(t, err)
 
 			allDocs = append(allDocs, docs...)
@@ -728,7 +725,7 @@ func TestMongoExecutor_ComplexRealWorld(t *testing.T) {
 			if result.NextPageCursor == "" {
 				break
 			}
-			q.Cursor = result.NextPageCursor
+			cursor = result.NextPageCursor
 		}
 
 		// Should get all accessories (5 total)
@@ -754,7 +751,7 @@ func TestMongoExecutor_TypedResults(t *testing.T) {
 		q, _ := p.Parse()
 
 		var products []Product
-		result, err := executor.Execute(ctx, q, &products)
+		result, err := executor.Execute(ctx, q, "", &products)
 		require.NoError(t, err)
 
 		assert.Greater(t, len(products), 0)
@@ -773,7 +770,7 @@ func TestMongoExecutor_TypedResults(t *testing.T) {
 		q, _ := p.Parse()
 
 		var docs []bson.M
-		_, err := executor.Execute(ctx, q, &docs)
+		_, err := executor.Execute(ctx, q, "", &docs)
 		require.NoError(t, err)
 
 		assert.Equal(t, 3, len(docs))

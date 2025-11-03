@@ -32,6 +32,7 @@ This directory contains comprehensive documentation for the go-query library.
 
 - **[FEATURES.md](FEATURES.md)** - Advanced features guide
   - Parser cache
+  - Count method ⭐ **New**
   - Map support
   - Dynamic data sources
   - Custom field getter

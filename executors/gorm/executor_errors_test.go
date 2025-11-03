@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/hadi77ir/go-query/parser"
-	"github.com/hadi77ir/go-query/query"
+	"github.com/hadi77ir/go-query/v2/parser"
+	"github.com/hadi77ir/go-query/v2/query"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -25,7 +25,7 @@ func TestGORMExecutor_ErrorHandling(t *testing.T) {
 		q, _ := p.Parse()
 
 		var products []Product
-		result, err := executor.Execute(ctx, q, &products)
+		result, err := executor.Execute(ctx, q, "", &products)
 
 		// Should return ErrNoRecordsFound
 		require.Error(t, err)
@@ -48,7 +48,7 @@ func TestGORMExecutor_ErrorHandling(t *testing.T) {
 		}
 
 		var products []Product
-		_, err := executor.Execute(ctx, q, &products)
+		_, err := executor.Execute(ctx, q, "", &products)
 
 		require.Error(t, err)
 		assert.True(t, errors.Is(err, query.ErrInvalidFieldName),
@@ -75,7 +75,7 @@ func TestGORMExecutor_ErrorHandling(t *testing.T) {
 		}
 
 		var products []Product
-		_, err := restrictedExecutor.Execute(ctx, q, &products)
+		_, err := restrictedExecutor.Execute(ctx, q, "", &products)
 
 		require.Error(t, err)
 		assert.True(t, errors.Is(err, query.ErrFieldNotAllowed),
@@ -97,7 +97,7 @@ func TestGORMExecutor_ErrorHandling(t *testing.T) {
 		q, _ := p.Parse()
 
 		var products []Product
-		_, err := restrictedExecutor.Execute(ctx, q, &products)
+		_, err := restrictedExecutor.Execute(ctx, q, "", &products)
 
 		require.Error(t, err)
 		assert.True(t, errors.Is(err, query.ErrRegexNotSupported),
@@ -114,7 +114,7 @@ func TestGORMExecutor_ErrorHandling(t *testing.T) {
 		q, _ := p.Parse()
 
 		var products []Product
-		_, err := restrictedExecutor.Execute(ctx, q, &products)
+		_, err := restrictedExecutor.Execute(ctx, q, "", &products)
 
 		require.Error(t, err)
 		assert.True(t, errors.Is(err, query.ErrRandomOrderNotAllowed),
@@ -127,7 +127,7 @@ func TestGORMExecutor_ErrorHandling(t *testing.T) {
 
 		// Pass a non-slice destination
 		var product Product
-		_, err := executor.Execute(ctx, q, &product)
+		_, err := executor.Execute(ctx, q, "", &product)
 
 		require.Error(t, err)
 		assert.True(t, errors.Is(err, query.ErrInvalidDestination),
@@ -139,7 +139,7 @@ func TestGORMExecutor_ErrorHandling(t *testing.T) {
 		q, _ := p.Parse()
 
 		var products []Product
-		_, err := executor.Execute(ctx, q, &products)
+		_, err := executor.Execute(ctx, q, "", &products)
 
 		// Demonstrate using switch for error handling
 		switch {
@@ -160,7 +160,7 @@ func TestGORMExecutor_ErrorHandling(t *testing.T) {
 		q, _ := p.Parse()
 
 		var products []Product
-		result, err := executor.Execute(ctx, q, &products)
+		result, err := executor.Execute(ctx, q, "", &products)
 
 		// Should succeed with no error
 		require.NoError(t, err)
@@ -187,7 +187,7 @@ func TestGORMExecutor_ErrorWrapping(t *testing.T) {
 		q, _ := p.Parse()
 
 		var results []InvalidModel
-		_, err := executor.Execute(ctx, q, &results)
+		_, err := executor.Execute(ctx, q, "", &results)
 
 		// Should get execution error
 		require.Error(t, err)
