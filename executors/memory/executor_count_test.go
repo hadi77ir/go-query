@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/hadi77ir/go-query/v2/parser"
-	"github.com/hadi77ir/go-query/v2/query"
+	"github.com/hadi77ir/go-query/parser"
+	"github.com/hadi77ir/go-query/query"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

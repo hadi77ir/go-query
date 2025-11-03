@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hadi77ir/go-query/v2/query"
+	query "github.com/hadi77ir/go-query/query"
 )
 
 // Parser parses query strings into Query objects

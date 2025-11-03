@@ -3,7 +3,7 @@ package executor
 import (
 	"context"
 
-	"github.com/hadi77ir/go-query/v2/query"
+	query "github.com/hadi77ir/go-query/query"
 )
 
 // Executor is the interface that all database-specific executors must implement

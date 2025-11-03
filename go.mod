@@ -1,4 +1,4 @@
-module github.com/hadi77ir/go-query/v2
+module github.com/hadi77ir/go-query
 
 go 1.21
 

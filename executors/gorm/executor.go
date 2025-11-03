@@ -6,9 +6,9 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/hadi77ir/go-query/v2/executor"
-	"github.com/hadi77ir/go-query/v2/internal/cursor"
-	"github.com/hadi77ir/go-query/v2/query"
+	"github.com/hadi77ir/go-query/executor"
+	"github.com/hadi77ir/go-query/internal/cursor"
+	"github.com/hadi77ir/go-query/query"
 	"gorm.io/gorm"
 )
 

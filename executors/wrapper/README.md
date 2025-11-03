@@ -13,7 +13,7 @@ A wrapper executor for go-query that imposes additional field restrictions on to
 ## Installation
 
 ```bash
-go get github.com/hadi77ir/go-query/v2/executors/wrapper
+go get github.com/hadi77ir/go-query/executors/wrapper
 ```
 
 ## Quick Start
@@ -27,10 +27,10 @@ import (
     "context"
     "fmt"
     
-    "github.com/hadi77ir/go-query/v2/executors/memory"
-    "github.com/hadi77ir/go-query/v2/executors/wrapper"
-    "github.com/hadi77ir/go-query/v2/parser"
-    "github.com/hadi77ir/go-query/v2/query"
+    "github.com/hadi77ir/go-query/executors/memory"
+    "github.com/hadi77ir/go-query/executors/wrapper"
+    "github.com/hadi77ir/go-query/parser"
+    "github.com/hadi77ir/go-query/query"
 )
 
 type User struct {

@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hadi77ir/go-query/v2/internal/cursor"
-	"github.com/hadi77ir/go-query/v2/query"
+	"github.com/hadi77ir/go-query/internal/cursor"
+	"github.com/hadi77ir/go-query/query"
 )
 
 // FieldGetterFunc is a function that retrieves a field value from an object

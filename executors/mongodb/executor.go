@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hadi77ir/go-query/v2/executor"
-	"github.com/hadi77ir/go-query/v2/internal/cursor"
-	"github.com/hadi77ir/go-query/v2/query"
+	"github.com/hadi77ir/go-query/executor"
+	"github.com/hadi77ir/go-query/internal/cursor"
+	"github.com/hadi77ir/go-query/query"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"

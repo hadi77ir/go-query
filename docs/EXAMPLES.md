@@ -17,9 +17,9 @@ Product search with multiple criteria:
 ```go
 import (
     "context"
-    "github.com/hadi77ir/go-query/v2/executors/mongodb"
-    "github.com/hadi77ir/go-query/v2/parser"
-    "github.com/hadi77ir/go-query/v2/query"
+    "github.com/hadi77ir/go-query/executors/mongodb"
+    "github.com/hadi77ir/go-query/parser"
+    "github.com/hadi77ir/go-query/query"
 )
 
 // Setup
@@ -154,9 +154,9 @@ import (
     "encoding/json"
     "net/http"
     
-    "github.com/hadi77ir/go-query/v2/executors/memory"
-    "github.com/hadi77ir/go-query/v2/parser"
-    "github.com/hadi77ir/go-query/v2/query"
+    "github.com/hadi77ir/go-query/executors/memory"
+    "github.com/hadi77ir/go-query/parser"
+    "github.com/hadi77ir/go-query/query"
 )
 
 var parserCache = parser.NewParserCache(100) // Shared cache

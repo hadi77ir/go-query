@@ -248,9 +248,9 @@ import (
     "fmt"
     "net/http"
     
-    "github.com/hadi77ir/go-query/v2/executors/gorm"
-    "github.com/hadi77ir/go-query/v2/parser"
-    "github.com/hadi77ir/go-query/v2/query"
+    "github.com/hadi77ir/go-query/executors/gorm"
+    "github.com/hadi77ir/go-query/parser"
+    "github.com/hadi77ir/go-query/query"
 )
 
 func handleQuery(w http.ResponseWriter, r *http.Request) {

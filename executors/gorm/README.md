@@ -5,7 +5,7 @@ GORM implementation for go-query. Supports PostgreSQL, MySQL, SQLite, SQL Server
 ## Installation
 
 ```bash
-go get github.com/hadi77ir/go-query/v2/executors/gorm
+go get github.com/hadi77ir/go-query/executors/gorm
 ```
 
 You'll also need to install your database driver:
@@ -33,9 +33,9 @@ import (
     "context"
     "log"
     
-    "github.com/hadi77ir/go-query/v2/executors/gorm"
-    "github.com/hadi77ir/go-query/v2/parser"
-    "github.com/hadi77ir/go-query/v2/query"
+    "github.com/hadi77ir/go-query/executors/gorm"
+    "github.com/hadi77ir/go-query/parser"
+    "github.com/hadi77ir/go-query/query"
     gormpkg "gorm.io/gorm"
     "gorm.io/driver/postgres"
 )

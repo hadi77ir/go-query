@@ -31,7 +31,7 @@ The `ParserCache` is a thread-safe cache that stores parsed query results, drama
 
 ```go
 import (
-    "github.com/hadi77ir/go-query/v2/parser"
+    "github.com/hadi77ir/go-query/parser"
 )
 
 // Create cache with capacity (recommended: 50-100 for most applications)

@@ -17,7 +17,7 @@ An in-memory executor for go-query that allows you to filter and query Go slices
 ## Installation
 
 ```bash
-go get github.com/hadi77ir/go-query/v2/executors/memory
+go get github.com/hadi77ir/go-query/executors/memory
 ```
 
 ## Quick Start
@@ -31,9 +31,9 @@ import (
     "context"
     "fmt"
     
-    "github.com/hadi77ir/go-query/v2/executors/memory"
-    "github.com/hadi77ir/go-query/v2/parser"
-    "github.com/hadi77ir/go-query/v2/query"
+    "github.com/hadi77ir/go-query/executors/memory"
+    "github.com/hadi77ir/go-query/parser"
+    "github.com/hadi77ir/go-query/query"
 )
 
 type Product struct {
@@ -295,9 +295,9 @@ import (
     "encoding/json"
     "net/http"
     
-    "github.com/hadi77ir/go-query/v2/executors/memory"
-    "github.com/hadi77ir/go-query/v2/parser"
-    "github.com/hadi77ir/go-query/v2/query"
+    "github.com/hadi77ir/go-query/executors/memory"
+    "github.com/hadi77ir/go-query/parser"
+    "github.com/hadi77ir/go-query/query"
 )
 
 type Product struct {

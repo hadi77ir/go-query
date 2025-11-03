@@ -19,16 +19,16 @@ A modular, production-ready query library for Golang with a powerful, Google-lik
 
 ```bash
 # Core library
-go get github.com/hadi77ir/go-query/v2
+go get github.com/hadi77ir/go-query
 
 # MongoDB executor (optional - separate module)
-go get github.com/hadi77ir/go-query/v2/executors/mongodb
+go get github.com/hadi77ir/go-query/executors/mongodb
 
 # GORM executor for SQL databases (optional - separate module)
-go get github.com/hadi77ir/go-query/v2/executors/gorm
+go get github.com/hadi77ir/go-query/executors/gorm
 
 # Memory executor for in-memory slices/maps (optional - separate module)
-go get github.com/hadi77ir/go-query/v2/executors/memory
+go get github.com/hadi77ir/go-query/executors/memory
 ```
 
 ## Quick Start
@@ -37,9 +37,9 @@ go get github.com/hadi77ir/go-query/v2/executors/memory
 
 ```go
 import (
-    "github.com/hadi77ir/go-query/v2/executors/mongodb"
-    "github.com/hadi77ir/go-query/v2/parser"
-    "github.com/hadi77ir/go-query/v2/query"
+    "github.com/hadi77ir/go-query/executors/mongodb"
+    "github.com/hadi77ir/go-query/parser"
+    "github.com/hadi77ir/go-query/query"
 )
 
 // Create parser cache (recommended for production)

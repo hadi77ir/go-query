@@ -5,7 +5,7 @@ MongoDB implementation for go-query.
 ## Installation
 
 ```bash
-go get github.com/hadi77ir/go-query/v2/executors/mongodb
+go get github.com/hadi77ir/go-query/executors/mongodb
 ```
 
 ## Usage
@@ -17,9 +17,9 @@ import (
     "context"
     "log"
     
-    "github.com/hadi77ir/go-query/v2/executors/mongodb"
-    "github.com/hadi77ir/go-query/v2/parser"
-    "github.com/hadi77ir/go-query/v2/query"
+    "github.com/hadi77ir/go-query/executors/mongodb"
+    "github.com/hadi77ir/go-query/parser"
+    "github.com/hadi77ir/go-query/query"
     "go.mongodb.org/mongo-driver/mongo"
     "go.mongodb.org/mongo-driver/mongo/options"
 )

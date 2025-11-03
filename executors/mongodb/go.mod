@@ -1,9 +1,9 @@
-module github.com/hadi77ir/go-query/v2/executors/mongodb
+module github.com/hadi77ir/go-query/executors/mongodb
 
 go 1.24.0
 
 require (
-	github.com/hadi77ir/go-query/v2 v2.0.0
+	github.com/hadi77ir/go-query v1.2.0
 	github.com/stretchr/testify v1.11.1
 	github.com/testcontainers/testcontainers-go v0.39.0
 	go.mongodb.org/mongo-driver v1.13.1
@@ -76,4 +76,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/hadi77ir/go-query/v2 => ../..
+replace github.com/hadi77ir/go-query => ../..
