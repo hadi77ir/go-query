@@ -4,7 +4,7 @@ go 1.24.0
 
 require (
 	github.com/hadi77ir/go-query/v2 v2.0.0
-	github.com/hadi77ir/go-query/v2/executors/memory v1.0.0
+	github.com/hadi77ir/go-query/v2/executors/memory v2.0.0
 	github.com/stretchr/testify v1.10.0
 )
 
