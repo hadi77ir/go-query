@@ -15,6 +15,9 @@ import (
 
 // generateLargeDataset creates 1000 random products for testing
 func generateLargeDataset(t *testing.T, db *gorm.DB) {
+	// Clear existing data first
+	db.Exec("DELETE FROM products")
+
 	rand.Seed(time.Now().UnixNano())
 	categories := []string{"electronics", "accessories", "computers", "audio", "gaming"}
 	brands := []string{"BrandA", "BrandB", "BrandC", "BrandD", "BrandE", "BrandF"}

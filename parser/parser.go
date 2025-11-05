@@ -437,6 +437,30 @@ func (p *Parser) tryExtractQueryOptionFromField(q *query.Query, key string) (boo
 		}
 		return true, nil
 
+	case "limit":
+		if err := p.nextToken(); err != nil {
+			return false, err
+		}
+		if p.curTok.Type != TokenOperator || p.curTok.Value != "=" {
+			return false, fmt.Errorf("expected '=' after limit")
+		}
+		if err := p.nextToken(); err != nil {
+			return false, err
+		}
+		val := p.getValue()
+		limit, err := strconv.Atoi(val)
+		if err != nil {
+			return false, fmt.Errorf("invalid limit: %s", val)
+		}
+		if limit < 0 {
+			return false, fmt.Errorf("limit must be non-negative, got: %d", limit)
+		}
+		q.Limit = limit
+		if err := p.nextToken(); err != nil {
+			return false, err
+		}
+		return true, nil
+
 		// Note: cursor is no longer part of Query - it should be passed separately to Execute
 	}
 

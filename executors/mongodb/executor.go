@@ -79,6 +79,26 @@ func (e *Executor) Execute(ctx context.Context, q *query.Query, cursorParam stri
 	}
 	result.TotalItems = totalItems
 
+	// Handle limit enforcement
+	itemsReturnedSoFar := 0
+	if cursorData != nil {
+		itemsReturnedSoFar = cursorData.ItemsReturned
+	}
+	if q.Limit > 0 {
+		remaining := q.Limit - itemsReturnedSoFar
+		if remaining <= 0 {
+			// Limit already reached, return empty result
+			result.ItemsReturned = 0
+			result.ShowingFrom = 0
+			result.ShowingTo = 0
+			return result, nil
+		}
+		// Adjust page size to not exceed limit
+		if pageSize > remaining {
+			pageSize = remaining
+		}
+	}
+
 	// Build find options
 	findOpts := options.Find()
 	findOpts.SetLimit(int64(pageSize + 1)) // Fetch one extra to check if there's a next page
@@ -211,10 +231,20 @@ func (e *Executor) Execute(ctx context.Context, q *query.Query, cursorParam stri
 			bson.Unmarshal(data, &lastDoc)
 		}
 
-		if hasMore {
+		// Check if we should generate next cursor (considering limit)
+		shouldGenerateNext := hasMore
+		if q.Limit > 0 {
+			newItemsReturned := itemsReturnedSoFar + result.ItemsReturned
+			if newItemsReturned >= q.Limit {
+				shouldGenerateNext = false
+			}
+		}
+
+		if shouldGenerateNext {
 			// Generate next cursor
 			nextCursorData := &cursor.CursorData{
-				Direction: "next",
+				Direction:     "next",
+				ItemsReturned: itemsReturnedSoFar + result.ItemsReturned,
 			}
 
 			if sortOrder == query.SortOrderRandom {
@@ -237,8 +267,13 @@ func (e *Executor) Execute(ctx context.Context, q *query.Query, cursorParam stri
 
 		// Generate previous cursor
 		if cursorData != nil && currentOffset > 0 {
+			prevItemsReturned := itemsReturnedSoFar - result.ItemsReturned
+			if prevItemsReturned < 0 {
+				prevItemsReturned = 0
+			}
 			prevCursorData := &cursor.CursorData{
-				Direction: "prev",
+				Direction:     "prev",
+				ItemsReturned: prevItemsReturned,
 			}
 
 			if sortOrder == query.SortOrderRandom {

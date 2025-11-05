@@ -162,6 +162,19 @@ func (e *MemoryExecutor) Execute(ctx context.Context, q *query.Query, cursorPara
 		sortOrder = e.options.DefaultSortOrder
 	}
 
+	// Apply pagination
+	pageSize := e.options.ValidatePageSize(q.PageSize)
+
+	// Decode cursor
+	var cursorData *cursor.CursorData
+	if cursorParam != "" {
+		var err error
+		cursorData, err = cursor.Decode(cursorParam)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %v", query.ErrInvalidCursor, err)
+		}
+	}
+
 	// Handle random order
 	if sortOrder == query.SortOrderRandom {
 		if !e.options.AllowRandomOrder {
@@ -169,11 +182,8 @@ func (e *MemoryExecutor) Execute(ctx context.Context, q *query.Query, cursorPara
 		}
 		// Use seed from cursor or generate new one
 		seed := int64(42) // Default seed
-		if cursorParam != "" {
-			cursorData, err := cursor.Decode(cursorParam)
-			if err == nil && cursorData != nil && cursorData.RandomSeed != 0 {
-				seed = cursorData.RandomSeed
-			}
+		if cursorData != nil && cursorData.RandomSeed != 0 {
+			seed = cursorData.RandomSeed
 		}
 		e.shuffleWithSeed(filtered, seed)
 	} else {
@@ -181,22 +191,19 @@ func (e *MemoryExecutor) Execute(ctx context.Context, q *query.Query, cursorPara
 		e.sortData(filtered, sortField, sortOrder)
 	}
 
-	// Apply pagination
-	pageSize := e.options.ValidatePageSize(q.PageSize)
+	// Handle limit enforcement
+	itemsReturnedSoFar := 0
+	if cursorData != nil {
+		itemsReturnedSoFar = cursorData.ItemsReturned
+	}
 
 	startIdx := 0
-	if cursorParam != "" {
-		cursorData, err := cursor.Decode(cursorParam)
-		if err != nil {
-			return nil, fmt.Errorf("%w: %v", query.ErrInvalidCursor, err)
-		}
-		if cursorData != nil {
-			startIdx = cursorData.Offset
-			if cursorData.Direction == "prev" {
-				startIdx -= pageSize
-				if startIdx < 0 {
-					startIdx = 0
-				}
+	if cursorData != nil {
+		startIdx = cursorData.Offset
+		if cursorData.Direction == "prev" {
+			startIdx -= pageSize
+			if startIdx < 0 {
+				startIdx = 0
 			}
 		}
 	}
@@ -204,6 +211,27 @@ func (e *MemoryExecutor) Execute(ctx context.Context, q *query.Query, cursorPara
 	endIdx := startIdx + pageSize
 	if endIdx > len(filtered) {
 		endIdx = len(filtered)
+	}
+
+	// Apply limit if set
+	if q.Limit > 0 {
+		remaining := q.Limit - itemsReturnedSoFar
+		if remaining <= 0 {
+			// Limit already reached, return empty result
+			return &query.Result{
+				NextPageCursor: "",
+				PrevPageCursor: "",
+				TotalItems:     totalItems,
+				ShowingFrom:    0,
+				ShowingTo:      0,
+				ItemsReturned:  0,
+			}, nil
+		}
+		// Adjust endIdx to not exceed limit
+		maxEndIdx := startIdx + remaining
+		if endIdx > maxEndIdx {
+			endIdx = maxEndIdx
+		}
 	}
 
 	// Get page of results
@@ -220,10 +248,20 @@ func (e *MemoryExecutor) Execute(ctx context.Context, q *query.Query, cursorPara
 
 	// Generate cursors
 	var nextCursor, prevCursor string
-	if endIdx < len(filtered) {
+	itemsReturned := len(pageData)
+	shouldGenerateNext := endIdx < len(filtered)
+	if q.Limit > 0 {
+		newItemsReturned := itemsReturnedSoFar + itemsReturned
+		if newItemsReturned >= q.Limit {
+			shouldGenerateNext = false
+		}
+	}
+
+	if shouldGenerateNext {
 		nextCursorData := &cursor.CursorData{
-			Offset:    endIdx,
-			Direction: "next",
+			Offset:        endIdx,
+			Direction:     "next",
+			ItemsReturned: itemsReturnedSoFar + itemsReturned,
 		}
 		if sortOrder == query.SortOrderRandom {
 			nextCursorData.RandomSeed = 42 // Use consistent seed
@@ -232,9 +270,14 @@ func (e *MemoryExecutor) Execute(ctx context.Context, q *query.Query, cursorPara
 	}
 
 	if startIdx > 0 {
+		prevItemsReturned := itemsReturnedSoFar - itemsReturned
+		if prevItemsReturned < 0 {
+			prevItemsReturned = 0
+		}
 		prevCursorData := &cursor.CursorData{
-			Offset:    startIdx,
-			Direction: "prev",
+			Offset:        startIdx,
+			Direction:     "prev",
+			ItemsReturned: prevItemsReturned,
 		}
 		if sortOrder == query.SortOrderRandom {
 			prevCursorData.RandomSeed = 42

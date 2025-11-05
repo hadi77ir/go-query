@@ -128,4 +128,5 @@ type Query struct {
 	SortBy    string
 	SortOrder SortOrder
 	PageSize  int
+	Limit     int // Maximum total items that can be returned (0 means no limit)
 }
