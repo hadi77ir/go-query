@@ -99,7 +99,7 @@ priority IN [1, 2, 3]
 
 ## Query Options
 
-Query options control pagination, sorting, and cursors:
+Query options control pagination, sorting, cursors, and result limits:
 
 ```go
 // Pagination
@@ -108,8 +108,11 @@ Query options control pagination, sorting, and cursors:
 // Sorting
 "sort_by = created_at sort_order = desc status = active"
 
+// Limit total results (different from page size)
+"limit = 50 page_size = 20 status = active"
+
 // Combined
-"page_size = 25 sort_by = price sort_order = asc category = electronics"
+"page_size = 25 sort_by = price sort_order = asc category = electronics limit = 100"
 
 // Random ordering
 "sort_order = random category = electronics"
@@ -129,6 +132,10 @@ Query options control pagination, sorting, and cursors:
 
 // Options mixed with AND
 "status = active and page_size = 20 and name = test"
+
+// Limit can be used with quoted numbers (like page_size)
+"limit = 50 status = active"
+"limit = \"50\" status = active"  // Quoted numbers also work
 ```
 
 See [Query Options](FEATURES.md#query-options) in FEATURES.md for complete documentation.
@@ -190,6 +197,16 @@ query := `
   and status IN [published, approved] 
   and author_id IN [1, 5, 10]
 `
+
+// Using limit to cap total results
+query := `
+  limit = 50
+  page_size = 10
+  category = electronics
+  and price >= 50
+  and price <= 500
+`
+// Returns max 50 items total, 10 per page
 ```
 
 ## Operator Reference

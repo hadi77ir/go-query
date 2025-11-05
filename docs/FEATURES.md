@@ -501,13 +501,14 @@ executor.Execute(ctx, parseQuery(`fullname CONTAINS "Smith"`), "", &results)
 
 ## Query Options
 
-Query options allow you to control pagination, sorting, and cursor-based navigation. Options can be placed **anywhere in the query string** - at the beginning, middle, or end.
+Query options allow you to control pagination, sorting, cursor-based navigation, and result limits. Options can be placed **anywhere in the query string** - at the beginning, middle, or end.
 
 ### Available Options
 
 | Option | Type | Description | Default |
 |--------|------|-------------|---------|
 | `page_size` | integer | Number of items per page | `10` |
+| `limit` | integer | Maximum total items that can be returned across all pages (0 = no limit) | `0` (no limit) |
 | `sort_by` | string | Field name to sort by | `_id` (or default from options) |
 | `sort_order` | string | Sort direction: `asc`, `desc`, or `random` | `asc` |
 | `cursor` | string | Pagination cursor for next/previous page | - |
@@ -518,11 +519,14 @@ Query options allow you to control pagination, sorting, and cursor-based navigat
 // Pagination
 query := "page_size = 20 status = active"
 
+// Limit total results (different from page size)
+query := "limit = 50 page_size = 20 status = active"
+
 // Sorting
 query := "sort_by = created_at sort_order = desc status = active"
 
 // Combined
-query := "page_size = 25 sort_by = price sort_order = asc category = electronics"
+query := "page_size = 25 sort_by = price sort_order = asc category = electronics limit = 100"
 ```
 
 ### Flexible Placement
@@ -557,6 +561,73 @@ query := "page_size = 100 status = active"
 // Page size validation
 // - Values <= 0 use default (10)
 // - Values > MaxPageSize are capped at MaxPageSize (default: 100)
+```
+
+### Limit (Total Results)
+
+The `limit` option restricts the **total number of items** that can be returned across all pages. This is different from `page_size`, which controls how many items are returned per page.
+
+```go
+// Limit total results to 50, even if there are 1000 matching items
+query := "limit = 50 page_size = 20 category = electronics"
+
+// First page: returns 20 items
+// Second page: returns 20 items
+// Third page: returns 10 items (50 total reached)
+// Fourth page: returns 0 items (limit reached)
+```
+
+**Key Differences:**
+
+| Feature | `page_size` | `limit` |
+|---------|-------------|---------|
+| **Controls** | Items per page | Total items across all pages |
+| **Example** | `page_size = 20` → 20 items per page | `limit = 50` → max 50 items total |
+| **Use Case** | Pagination | Result cap/rate limiting |
+| **Default** | 10 | 0 (no limit) |
+
+**Example: Limit with Pagination**
+
+```go
+// Limit to 75 total items, 25 per page
+query := "limit = 75 page_size = 25 sort_by = id"
+
+// Page 1: 25 items (25/75 used)
+// Page 2: 25 items (50/75 used)
+// Page 3: 25 items (75/75 used - limit reached)
+// Page 4: 0 items (no next cursor, limit reached)
+```
+
+**Limit = 0 (No Limit)**
+
+```go
+// No limit on total results
+query := "limit = 0 page_size = 20 status = active"
+
+// Or simply omit limit (default is 0)
+query := "page_size = 20 status = active"
+```
+
+**Limit with Filters**
+
+```go
+// Limit applies to filtered results
+query := "limit = 10 category = electronics page_size = 5"
+
+// Returns max 10 electronics items total
+// First page: 5 items
+// Second page: 5 items
+// Third page: 0 items (limit reached)
+```
+
+**Quoted Numbers**
+
+Like `page_size`, `limit` accepts both quoted and unquoted numbers:
+
+```go
+// Both work identically
+query := "limit = 50 status = active"
+query := "limit = \"50\" status = active"
 ```
 
 **Example:**
@@ -718,11 +789,22 @@ query := `page_size = 10
 **Advanced Query with All Options:**
 ```go
 query := `page_size = 20 
+          limit = 100
           sort_by = rating 
           sort_order = desc 
           featured = true 
           and rating >= 4.5 
           and price >= 30`
+```
+
+**Using Limit to Cap Results:**
+```go
+// Cap search results to prevent excessive data transfer
+query := `limit = 50 
+          page_size = 10 
+          category = electronics 
+          and price < 100`
+// Returns max 50 items total, 10 per page
 ```
 
 ### Default Values
@@ -732,6 +814,7 @@ Query options use sensible defaults:
 ```go
 // Defaults
 page_size: 10
+limit: 0 (no limit)
 sort_by: "_id" (or DefaultSortField from executor options)
 sort_order: "asc"
 ```
@@ -756,16 +839,22 @@ query := "status = active"  // Uses page_size=20, sort_by=created_at, sort_order
 ### Best Practices
 
 1. **Always specify page_size** - Prevents accidental large result sets
-2. **Use cursor-based pagination** - More efficient than offset for large datasets
-3. **Set MaxPageSize** - Prevent resource exhaustion attacks
-4. **Place options where they read naturally** - Options can go anywhere, choose readability
-5. **Combine with field restriction** - Use `AllowedFields` to prevent sorting/filtering on sensitive fields
+2. **Use limit to cap total results** - Prevents excessive data transfer when combined with page_size
+3. **Use cursor-based pagination** - More efficient than offset for large datasets
+4. **Set MaxPageSize** - Prevent resource exhaustion attacks
+5. **Place options where they read naturally** - Options can go anywhere, choose readability
+6. **Combine with field restriction** - Use `AllowedFields` to prevent sorting/filtering on sensitive fields
 
 ### Error Handling
 
 ```go
 // Invalid page size
 query := "page_size = invalid"  // Parser error
+
+// Invalid limit
+query := "limit = invalid"      // Parser error
+query := "limit = -10"           // Parser error (must be non-negative)
+query := "limit = 10.5"          // Parser error (must be integer)
 
 // Invalid sort field (not in allowed list)
 opts.AllowedFields = []string{"id", "name"}
