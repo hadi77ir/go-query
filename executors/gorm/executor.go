@@ -423,32 +423,80 @@ func (e *Executor) buildFilter(node query.Node) (string, []interface{}, error) {
 
 		switch n.Operator {
 		case query.OpEqual:
-			return fmt.Sprintf("%s = ?", field), []interface{}{e.convertValue(n.Value)}, nil
+			val, err := e.convertValue(field, n.Value)
+			if err != nil {
+				return "", nil, err
+			}
+			return fmt.Sprintf("%s = ?", field), []interface{}{val}, nil
 		case query.OpNotEqual:
-			return fmt.Sprintf("%s != ?", field), []interface{}{e.convertValue(n.Value)}, nil
+			val, err := e.convertValue(field, n.Value)
+			if err != nil {
+				return "", nil, err
+			}
+			return fmt.Sprintf("%s != ?", field), []interface{}{val}, nil
 		case query.OpGreaterThan:
-			return fmt.Sprintf("%s > ?", field), []interface{}{e.convertValue(n.Value)}, nil
+			val, err := e.convertValue(field, n.Value)
+			if err != nil {
+				return "", nil, err
+			}
+			return fmt.Sprintf("%s > ?", field), []interface{}{val}, nil
 		case query.OpGreaterThanOrEqual:
-			return fmt.Sprintf("%s >= ?", field), []interface{}{e.convertValue(n.Value)}, nil
+			val, err := e.convertValue(field, n.Value)
+			if err != nil {
+				return "", nil, err
+			}
+			return fmt.Sprintf("%s >= ?", field), []interface{}{val}, nil
 		case query.OpLessThan:
-			return fmt.Sprintf("%s < ?", field), []interface{}{e.convertValue(n.Value)}, nil
+			val, err := e.convertValue(field, n.Value)
+			if err != nil {
+				return "", nil, err
+			}
+			return fmt.Sprintf("%s < ?", field), []interface{}{val}, nil
 		case query.OpLessThanOrEqual:
-			return fmt.Sprintf("%s <= ?", field), []interface{}{e.convertValue(n.Value)}, nil
+			val, err := e.convertValue(field, n.Value)
+			if err != nil {
+				return "", nil, err
+			}
+			return fmt.Sprintf("%s <= ?", field), []interface{}{val}, nil
 		case query.OpLike:
-			return fmt.Sprintf("%s LIKE ?", field), []interface{}{e.convertValue(n.Value)}, nil
+			val, err := e.convertValue(field, n.Value)
+			if err != nil {
+				return "", nil, err
+			}
+			return fmt.Sprintf("%s LIKE ?", field), []interface{}{val}, nil
 		case query.OpNotLike:
-			return fmt.Sprintf("%s NOT LIKE ?", field), []interface{}{e.convertValue(n.Value)}, nil
+			val, err := e.convertValue(field, n.Value)
+			if err != nil {
+				return "", nil, err
+			}
+			return fmt.Sprintf("%s NOT LIKE ?", field), []interface{}{val}, nil
 		case query.OpContains:
-			str := e.convertValue(n.Value)
+			val, err := e.convertValue(field, n.Value)
+			if err != nil {
+				return "", nil, err
+			}
+			str := fmt.Sprintf("%v", val)
 			return fmt.Sprintf("%s LIKE ?", field), []interface{}{fmt.Sprintf("%%%v%%", str)}, nil
 		case query.OpIContains:
-			str := e.convertValue(n.Value)
+			val, err := e.convertValue(field, n.Value)
+			if err != nil {
+				return "", nil, err
+			}
+			str := fmt.Sprintf("%v", val)
 			return fmt.Sprintf("LOWER(%s) LIKE LOWER(?)", field), []interface{}{fmt.Sprintf("%%%v%%", str)}, nil
 		case query.OpStartsWith:
-			str := e.convertValue(n.Value)
+			val, err := e.convertValue(field, n.Value)
+			if err != nil {
+				return "", nil, err
+			}
+			str := fmt.Sprintf("%v", val)
 			return fmt.Sprintf("%s LIKE ?", field), []interface{}{fmt.Sprintf("%v%%", str)}, nil
 		case query.OpEndsWith:
-			str := e.convertValue(n.Value)
+			val, err := e.convertValue(field, n.Value)
+			if err != nil {
+				return "", nil, err
+			}
+			str := fmt.Sprintf("%v", val)
 			return fmt.Sprintf("%s LIKE ?", field), []interface{}{fmt.Sprintf("%%%v", str)}, nil
 		case query.OpRegex:
 			// Check if regex is disabled
@@ -457,10 +505,17 @@ func (e *Executor) buildFilter(node query.Node) (string, []interface{}, error) {
 			}
 			// Note: Regex support varies by database
 			// PostgreSQL: ~, MySQL: REGEXP, SQLite: REGEXP (needs extension)
-			str := e.convertValue(n.Value)
+			val, err := e.convertValue(field, n.Value)
+			if err != nil {
+				return "", nil, err
+			}
+			str := fmt.Sprintf("%v", val)
 			return fmt.Sprintf("%s REGEXP ?", field), []interface{}{str}, nil
 		case query.OpIn:
-			arr := e.convertArrayValue(n.Value)
+			arr, err := e.convertArrayValue(field, n.Value)
+			if err != nil {
+				return "", nil, err
+			}
 			if len(arr) == 0 {
 				return "1 = 0", []interface{}{}, nil // Empty IN clause
 			}
@@ -470,7 +525,10 @@ func (e *Executor) buildFilter(node query.Node) (string, []interface{}, error) {
 			}
 			return fmt.Sprintf("%s IN (%s)", field, strings.Join(placeholders, ", ")), arr, nil
 		case query.OpNotIn:
-			arr := e.convertArrayValue(n.Value)
+			arr, err := e.convertArrayValue(field, n.Value)
+			if err != nil {
+				return "", nil, err
+			}
 			if len(arr) == 0 {
 				return "1 = 1", []interface{}{}, nil // Empty NOT IN clause
 			}
@@ -512,34 +570,47 @@ func (e *Executor) isValidField(field string) bool {
 	return true
 }
 
-// convertValue converts query values to appropriate types
-func (e *Executor) convertValue(val interface{}) interface{} {
+// convertValue converts query values to appropriate types and applies ValueConverter if configured
+func (e *Executor) convertValue(field string, val interface{}) (interface{}, error) {
+	// First convert to base type
+	var baseValue interface{}
 	switch v := val.(type) {
 	case query.StringValue:
-		return string(v)
+		baseValue = string(v)
 	case query.IntValue:
-		return int64(v)
+		baseValue = int64(v)
 	case query.FloatValue:
-		return float64(v)
+		baseValue = float64(v)
 	case query.BoolValue:
-		return bool(v)
+		baseValue = bool(v)
 	case query.DateTimeValue:
-		return v
+		baseValue = v
 	default:
-		return val
+		baseValue = val
 	}
+
+	// Apply ValueConverter if configured
+	return e.options.ConvertValue(field, baseValue)
 }
 
-// convertArrayValue converts an array value to a slice
-func (e *Executor) convertArrayValue(val interface{}) []interface{} {
+// convertArrayValue converts an array value to a slice and applies ValueConverter if configured
+func (e *Executor) convertArrayValue(field string, val interface{}) ([]interface{}, error) {
 	if arrVal, ok := val.(query.ArrayValue); ok {
 		result := make([]interface{}, len(arrVal))
 		for i, v := range arrVal {
-			result[i] = e.convertValue(v)
+			converted, err := e.convertValue(field, v)
+			if err != nil {
+				return nil, err
+			}
+			result[i] = converted
 		}
-		return result
+		return result, nil
 	}
-	return []interface{}{e.convertValue(val)}
+	converted, err := e.convertValue(field, val)
+	if err != nil {
+		return nil, err
+	}
+	return []interface{}{converted}, nil
 }
 
 // buildCursorFilter builds a WHERE clause for cursor-based pagination

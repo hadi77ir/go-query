@@ -1,10 +1,10 @@
-module github.com/hadi77ir/go-query/executors/wrapper/v2
+module github.com/hadi77ir/go-query/executors/wrapper
 
 go 1.24.0
 
 require (
-	github.com/hadi77ir/go-query v1.2.0
-	github.com/hadi77ir/go-query/executors/memory v1.2.0
+	github.com/hadi77ir/go-query v1.4.0
+	github.com/hadi77ir/go-query/executors/memory v1.4.0
 	github.com/stretchr/testify v1.10.0
 )
 

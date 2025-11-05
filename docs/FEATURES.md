@@ -12,9 +12,10 @@ This document covers all features of the go-query library, including new additio
 4. [Dynamic Data Sources](#dynamic-data-sources)
 5. [Custom Field Getter](#custom-field-getter)
 6. [Query Options](#query-options)
-7. [REGEX Support](#regex-support)
-8. [Unicode Handling](#unicode-handling)
-9. [Field Restriction](#field-restriction)
+7. [Value Converter](#value-converter)
+8. [REGEX Support](#regex-support)
+9. [Unicode Handling](#unicode-handling)
+10. [Field Restriction](#field-restriction)
 
 ## Parser Cache
 
@@ -870,6 +871,201 @@ query := "sort_order = random"  // Returns ErrRandomOrderNotAllowed
 // Invalid cursor
 query := "cursor = corrupt_data"  // Returns error
 ```
+
+## Value Converter
+
+The `ValueConverter` function enables automatic conversion of query values to their underlying database representation. This is especially useful for converting user-friendly enum strings (e.g., `"usbc"`, `"bluetooth"`) to their numeric representations (e.g., `2`, `3`) stored in the database.
+
+### Why Use Value Converter?
+
+- **User-Friendly Queries**: Users can query with readable strings instead of numeric IDs
+- **Automatic Conversion**: No manual conversion needed in application code
+- **Field-Specific Logic**: Different conversion rules for different fields
+- **Array Support**: Works seamlessly with array operations (`IN`, `CONTAINS`)
+
+### Basic Example
+
+```go
+opts := &query.ExecutorOptions{
+    ValueConverter: func(field string, value interface{}) (interface{}, error) {
+        if field == "features" {
+            if str, ok := value.(string); ok {
+                switch str {
+                case "usbc":
+                    return 2, nil
+                case "bluetooth":
+                    return 3, nil
+                case "wifi":
+                    return 4, nil
+                }
+            }
+        }
+        return value, nil // No conversion for other fields
+    },
+}
+
+executor := memory.NewExecutor(data, opts)
+
+// Query with enum strings - automatically converted
+// features = "usbc" → features = 2
+// features IN ["usbc", "bluetooth"] → features IN [2, 3]
+```
+
+### Enum String to Integer Conversion
+
+Convert human-readable enum strings to database integers:
+
+```go
+type Product struct {
+    ID       int
+    Name     string
+    Features []int  // Database stores: 2=usbc, 3=bluetooth, 4=wifi
+}
+
+data := []Product{
+    {ID: 1, Name: "Laptop", Features: []int{2, 3}},
+    {ID: 2, Name: "Phone", Features: []int{3, 4}},
+}
+
+opts := &query.ExecutorOptions{
+    ValueConverter: func(field string, value interface{}) (interface{}, error) {
+        if field == "features" {
+            enumMap := map[string]int{
+                "usbc":      2,
+                "bluetooth": 3,
+                "wifi":      4,
+            }
+            if str, ok := value.(string); ok {
+                if intVal, exists := enumMap[str]; exists {
+                    return intVal, nil
+                }
+            }
+        }
+        return value, nil
+    },
+}
+
+executor := memory.NewExecutor(data, opts)
+
+// These queries work with enum strings
+executor.Execute(ctx, parseQuery(`features CONTAINS "usbc"`), "", &results)
+executor.Execute(ctx, parseQuery(`features IN ["usbc", "bluetooth"]`), "", &results)
+```
+
+### Array CONTAINS with Enum Conversion
+
+The `CONTAINS` operator automatically works with array fields when a converter is configured:
+
+```go
+// Query: features CONTAINS "usbc"
+// 1. Converter converts "usbc" → 2
+// 2. Checks if Features array contains 2
+// 3. Returns matching products
+
+opts.ValueConverter = func(field string, value interface{}) (interface{}, error) {
+    if field == "features" {
+        if str, ok := value.(string); ok {
+            switch str {
+            case "usbc": return 2, nil
+            case "bluetooth": return 3, nil
+            case "wifi": return 4, nil
+            }
+        }
+    }
+    return value, nil
+}
+
+// Query works with array fields
+executor.Execute(ctx, parseQuery(`features CONTAINS "usbc"`), "", &results)
+```
+
+### Multiple Field Conversions
+
+Handle different conversion logic for different fields:
+
+```go
+opts.ValueConverter = func(field string, value interface{}) (interface{}, error) {
+    switch field {
+    case "features":
+        // Convert feature enum strings to integers
+        if str, ok := value.(string); ok {
+            switch str {
+            case "usbc": return 2, nil
+            case "bluetooth": return 3, nil
+            case "wifi": return 4, nil
+            }
+        }
+    case "status":
+        // Convert status strings to integers
+        if str, ok := value.(string); ok {
+            switch str {
+            case "active": return 1, nil
+            case "inactive": return 0, nil
+            case "pending": return 2, nil
+            }
+        }
+    case "priority":
+        // Convert priority strings to integers
+        if str, ok := value.(string); ok {
+            switch str {
+            case "low": return 1, nil
+            case "medium": return 2, nil
+            case "high": return 3, nil
+            }
+        }
+    }
+    return value, nil
+}
+```
+
+### Supported Operators
+
+ValueConverter works with all comparison operators:
+
+- **Equality**: `features = "usbc"` → `features = 2`
+- **Inequality**: `features != "wifi"` → `features != 4`
+- **Comparison**: `priority > "low"` → `priority > 1` (if priority supports comparison)
+- **IN**: `features IN ["usbc", "bluetooth"]` → `features IN [2, 3]`
+- **CONTAINS**: `features CONTAINS "usbc"` → `features CONTAINS 2`
+- **Array CONTAINS**: Works with array fields (checks if array contains converted value)
+
+### Error Handling
+
+Return errors for invalid values:
+
+```go
+opts.ValueConverter = func(field string, value interface{}) (interface{}, error) {
+    if field == "features" {
+        if str, ok := value.(string); ok {
+            switch str {
+            case "usbc": return 2, nil
+            case "bluetooth": return 3, nil
+            case "wifi": return 4, nil
+            default:
+                return nil, fmt.Errorf("unknown feature: %s", str)
+            }
+        }
+    }
+    return value, nil
+}
+```
+
+### Best Practices
+
+1. **Field-Specific Logic**: Use the `field` parameter to apply different conversion rules
+2. **Type Safety**: Always check value types before conversion
+3. **Error Handling**: Return meaningful errors for invalid values
+4. **Performance**: Keep conversion logic simple and fast (it's called for every value)
+5. **Backward Compatibility**: Return the original value for fields that don't need conversion
+
+### Notes
+
+- **Optional**: If `ValueConverter` is `nil`, no conversion is performed (default behavior)
+- **All Executors**: Works with Memory, GORM, and MongoDB executors
+- **Backward Compatible**: Existing queries work without a converter configured
+- **Array Fields**: `CONTAINS` automatically supports array fields in Memory executor
+
+See [Configuration Guide](CONFIGURATION.md#value-converter) for more details.
 
 ## REGEX Support
 

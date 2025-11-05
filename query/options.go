@@ -1,5 +1,32 @@
 package query
 
+// ValueConverter is a function that converts query values to their underlying representation.
+// This is useful for converting enum strings (e.g., "usbc", "bluetooth") to their
+// numeric representations (e.g., 2, 3) that are stored in the database.
+//
+// Parameters:
+//   - field: The field name being queried
+//   - value: The value from the query (can be StringValue, IntValue, etc.)
+//
+// Returns:
+//   - converted: The converted value to use in the query
+//   - error: An error if conversion fails (returning the original value is acceptable)
+//
+// Example:
+//
+//	ValueConverter: func(field string, value interface{}) (interface{}, error) {
+//	    if field == "features" {
+//	        if str, ok := value.(StringValue); ok {
+//	            switch string(str) {
+//	            case "usbc": return 2, nil
+//	            case "bluetooth": return 3, nil
+//	            }
+//	        }
+//	    }
+//	    return value, nil // No conversion, use original value
+//	}
+type ValueConverter func(field string, value interface{}) (interface{}, error)
+
 // ExecutorOptions contains configuration options for query executors
 type ExecutorOptions struct {
 	// MaxPageSize is the maximum allowed page size
@@ -41,6 +68,11 @@ type ExecutorOptions struct {
 	// Set to true for databases that don't support regex (e.g., SQLite without extension)
 	// When disabled, queries with REGEX will return a clear error
 	DisableRegex bool
+
+	// ValueConverter converts query values to their underlying representation.
+	// Useful for converting enum strings to integers, or any other value transformation.
+	// If nil, no conversion is performed.
+	ValueConverter ValueConverter
 }
 
 // DefaultExecutorOptions returns default executor options
@@ -83,4 +115,12 @@ func (o *ExecutorOptions) IsFieldAllowed(field string) bool {
 		}
 	}
 	return false
+}
+
+// ConvertValue applies the ValueConverter if configured, otherwise returns the original value
+func (o *ExecutorOptions) ConvertValue(field string, value interface{}) (interface{}, error) {
+	if o.ValueConverter == nil {
+		return value, nil
+	}
+	return o.ValueConverter(field, value)
 }

@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/hadi77ir/go-query/internal/cursor"
 	"github.com/hadi77ir/go-query/query"
@@ -338,42 +339,48 @@ func (e *MemoryExecutor) evaluateComparison(n *query.ComparisonNode, item reflec
 		return false, nil
 	}
 
+	// Convert query value using ValueConverter if configured
+	queryValue, err := e.convertValue(field, n.Value)
+	if err != nil {
+		return false, err
+	}
+
 	// Evaluate operator
 	switch n.Operator {
 	case query.OpEqual:
-		return e.compareEqual(fieldValue, n.Value), nil
+		return e.compareEqual(fieldValue, queryValue), nil
 	case query.OpNotEqual:
-		return !e.compareEqual(fieldValue, n.Value), nil
+		return !e.compareEqual(fieldValue, queryValue), nil
 	case query.OpGreaterThan:
-		return e.compareGreater(fieldValue, n.Value, false), nil
+		return e.compareGreater(fieldValue, queryValue, false), nil
 	case query.OpGreaterThanOrEqual:
-		return e.compareGreater(fieldValue, n.Value, true), nil
+		return e.compareGreater(fieldValue, queryValue, true), nil
 	case query.OpLessThan:
-		return e.compareLess(fieldValue, n.Value, false), nil
+		return e.compareLess(fieldValue, queryValue, false), nil
 	case query.OpLessThanOrEqual:
-		return e.compareLess(fieldValue, n.Value, true), nil
+		return e.compareLess(fieldValue, queryValue, true), nil
 	case query.OpLike:
-		return e.evaluateLike(fieldValue, n.Value), nil
+		return e.evaluateLike(fieldValue, queryValue), nil
 	case query.OpNotLike:
-		return !e.evaluateLike(fieldValue, n.Value), nil
+		return !e.evaluateLike(fieldValue, queryValue), nil
 	case query.OpContains:
-		return e.evaluateContains(fieldValue, n.Value, true), nil
+		return e.evaluateContains(field, fieldValue, queryValue, true), nil
 	case query.OpIContains:
-		return e.evaluateContains(fieldValue, n.Value, false), nil
+		return e.evaluateContains(field, fieldValue, queryValue, false), nil
 	case query.OpStartsWith:
-		return e.evaluateStartsWith(fieldValue, n.Value), nil
+		return e.evaluateStartsWith(fieldValue, queryValue), nil
 	case query.OpEndsWith:
-		return e.evaluateEndsWith(fieldValue, n.Value), nil
+		return e.evaluateEndsWith(fieldValue, queryValue), nil
 	case query.OpRegex:
 		// Check if regex is disabled
 		if e.options.ExecutorOptions.DisableRegex {
 			return false, query.ErrRegexNotSupported
 		}
-		return e.evaluateRegex(fieldValue, n.Value), nil
+		return e.evaluateRegex(fieldValue, queryValue), nil
 	case query.OpIn:
-		return e.evaluateIn(fieldValue, n.Value), nil
+		return e.evaluateIn(field, fieldValue, queryValue), nil
 	case query.OpNotIn:
-		return !e.evaluateIn(fieldValue, n.Value), nil
+		return !e.evaluateIn(field, fieldValue, queryValue), nil
 	default:
 		return false, query.ErrInvalidQuery
 	}
@@ -537,9 +544,29 @@ func (e *MemoryExecutor) evaluateLike(fieldVal, pattern interface{}) bool {
 	return matched
 }
 
-func (e *MemoryExecutor) evaluateContains(fieldVal, substr interface{}, caseSensitive bool) bool {
+func (e *MemoryExecutor) evaluateContains(field string, fieldVal, substr interface{}, caseSensitive bool) bool {
+	// Convert the query value once (for both array and string cases)
+	convertedSubstr, err := e.convertValue(field, substr)
+	if err != nil {
+		convertedSubstr = substr // Fallback to original if conversion fails
+	}
+
+	// Check if fieldVal is an array/slice - support array CONTAINS
+	fieldValReflect := reflect.ValueOf(fieldVal)
+	if fieldValReflect.Kind() == reflect.Slice || fieldValReflect.Kind() == reflect.Array {
+		// Array CONTAINS: check if any element in the array matches the converted value
+		for i := 0; i < fieldValReflect.Len(); i++ {
+			elem := fieldValReflect.Index(i).Interface()
+			if e.compareEqual(elem, convertedSubstr) {
+				return true
+			}
+		}
+		return false
+	}
+
+	// String CONTAINS: original behavior
 	str := fmt.Sprintf("%v", fieldVal)
-	subStr := fmt.Sprintf("%v", substr)
+	subStr := fmt.Sprintf("%v", convertedSubstr)
 
 	if !caseSensitive {
 		str = strings.ToLower(str)
@@ -568,7 +595,7 @@ func (e *MemoryExecutor) evaluateRegex(fieldVal, pattern interface{}) bool {
 	return matched
 }
 
-func (e *MemoryExecutor) evaluateIn(fieldVal, arrayVal interface{}) bool {
+func (e *MemoryExecutor) evaluateIn(field string, fieldVal, arrayVal interface{}) bool {
 	// Convert array to slice
 	arr := reflect.ValueOf(arrayVal)
 	if arr.Kind() != reflect.Slice {
@@ -576,11 +603,51 @@ func (e *MemoryExecutor) evaluateIn(fieldVal, arrayVal interface{}) bool {
 	}
 
 	for i := 0; i < arr.Len(); i++ {
-		if e.compareEqual(fieldVal, arr.Index(i).Interface()) {
+		elem := arr.Index(i).Interface()
+		// Convert each array element using ValueConverter
+		convertedElem, err := e.convertValue(field, elem)
+		if err != nil {
+			continue // Skip this element if conversion fails
+		}
+		if e.compareEqual(fieldVal, convertedElem) {
 			return true
 		}
 	}
 	return false
+}
+
+// convertValue converts query values to appropriate types and applies ValueConverter if configured
+func (e *MemoryExecutor) convertValue(field string, val interface{}) (interface{}, error) {
+	// First convert to base type
+	var baseValue interface{}
+	switch v := val.(type) {
+	case query.StringValue:
+		baseValue = string(v)
+	case query.IntValue:
+		baseValue = int64(v)
+	case query.FloatValue:
+		baseValue = float64(v)
+	case query.BoolValue:
+		baseValue = bool(v)
+	case query.DateTimeValue:
+		baseValue = time.Time(v)
+	case query.ArrayValue:
+		// For array values, convert each element
+		arr := make([]interface{}, len(v))
+		for i, elem := range v {
+			converted, err := e.convertValue(field, elem)
+			if err != nil {
+				return nil, err
+			}
+			arr[i] = converted
+		}
+		baseValue = arr
+	default:
+		baseValue = val
+	}
+
+	// Apply ValueConverter if configured
+	return e.options.ExecutorOptions.ConvertValue(field, baseValue)
 }
 
 // sortData sorts a slice of reflect.Values

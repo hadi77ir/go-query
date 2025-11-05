@@ -3,7 +3,7 @@ module github.com/hadi77ir/go-query/executors/mongodb
 go 1.24.0
 
 require (
-	github.com/hadi77ir/go-query v1.2.0
+	github.com/hadi77ir/go-query v1.4.0
 	github.com/stretchr/testify v1.11.1
 	github.com/testcontainers/testcontainers-go v0.39.0
 	go.mongodb.org/mongo-driver v1.13.1

@@ -340,54 +340,104 @@ func (e *Executor) buildFilter(node query.Node) (bson.M, error) {
 		}
 		switch n.Operator {
 		case query.OpEqual:
-			value := e.convertValue(n.Value)
+			value, err := e.convertValue(field, n.Value)
+			if err != nil {
+				return nil, err
+			}
 			return bson.M{field: value}, nil
 		case query.OpNotEqual:
-			value := e.convertValue(n.Value)
+			value, err := e.convertValue(field, n.Value)
+			if err != nil {
+				return nil, err
+			}
 			return bson.M{field: bson.M{"$ne": value}}, nil
 		case query.OpGreaterThan:
-			value := e.convertValue(n.Value)
+			value, err := e.convertValue(field, n.Value)
+			if err != nil {
+				return nil, err
+			}
 			return bson.M{field: bson.M{"$gt": value}}, nil
 		case query.OpGreaterThanOrEqual:
-			value := e.convertValue(n.Value)
+			value, err := e.convertValue(field, n.Value)
+			if err != nil {
+				return nil, err
+			}
 			return bson.M{field: bson.M{"$gte": value}}, nil
 		case query.OpLessThan:
-			value := e.convertValue(n.Value)
+			value, err := e.convertValue(field, n.Value)
+			if err != nil {
+				return nil, err
+			}
 			return bson.M{field: bson.M{"$lt": value}}, nil
 		case query.OpLessThanOrEqual:
-			value := e.convertValue(n.Value)
+			value, err := e.convertValue(field, n.Value)
+			if err != nil {
+				return nil, err
+			}
 			return bson.M{field: bson.M{"$lte": value}}, nil
 		case query.OpLike:
 			// Convert SQL LIKE to MongoDB regex
-			pattern := e.likeToRegex(n.Value)
+			pattern, err := e.likeToRegex(field, n.Value)
+			if err != nil {
+				return nil, err
+			}
 			return bson.M{field: bson.M{"$regex": pattern, "$options": ""}}, nil
 		case query.OpNotLike:
-			pattern := e.likeToRegex(n.Value)
+			pattern, err := e.likeToRegex(field, n.Value)
+			if err != nil {
+				return nil, err
+			}
 			return bson.M{field: bson.M{"$not": bson.M{"$regex": pattern, "$options": ""}}}, nil
 		case query.OpContains:
-			str := e.convertValue(n.Value)
-			return bson.M{field: bson.M{"$regex": fmt.Sprintf("%v", str), "$options": ""}}, nil
+			value, err := e.convertValue(field, n.Value)
+			if err != nil {
+				return nil, err
+			}
+			str := fmt.Sprintf("%v", value)
+			return bson.M{field: bson.M{"$regex": str, "$options": ""}}, nil
 		case query.OpIContains:
-			str := e.convertValue(n.Value)
-			return bson.M{field: bson.M{"$regex": fmt.Sprintf("%v", str), "$options": "i"}}, nil
+			value, err := e.convertValue(field, n.Value)
+			if err != nil {
+				return nil, err
+			}
+			str := fmt.Sprintf("%v", value)
+			return bson.M{field: bson.M{"$regex": str, "$options": "i"}}, nil
 		case query.OpStartsWith:
-			str := e.convertValue(n.Value)
+			value, err := e.convertValue(field, n.Value)
+			if err != nil {
+				return nil, err
+			}
+			str := fmt.Sprintf("%v", value)
 			return bson.M{field: bson.M{"$regex": fmt.Sprintf("^%v", str), "$options": ""}}, nil
 		case query.OpEndsWith:
-			str := e.convertValue(n.Value)
+			value, err := e.convertValue(field, n.Value)
+			if err != nil {
+				return nil, err
+			}
+			str := fmt.Sprintf("%v", value)
 			return bson.M{field: bson.M{"$regex": fmt.Sprintf("%v$", str), "$options": ""}}, nil
 		case query.OpRegex:
 			// Check if regex is disabled
 			if e.options.DisableRegex {
 				return nil, query.ErrRegexNotSupported
 			}
-			str := e.convertValue(n.Value)
-			return bson.M{field: bson.M{"$regex": fmt.Sprintf("%v", str), "$options": ""}}, nil
+			value, err := e.convertValue(field, n.Value)
+			if err != nil {
+				return nil, err
+			}
+			str := fmt.Sprintf("%v", value)
+			return bson.M{field: bson.M{"$regex": str, "$options": ""}}, nil
 		case query.OpIn:
-			arr := e.convertArrayValue(n.Value)
+			arr, err := e.convertArrayValue(field, n.Value)
+			if err != nil {
+				return nil, err
+			}
 			return bson.M{field: bson.M{"$in": arr}}, nil
 		case query.OpNotIn:
-			arr := e.convertArrayValue(n.Value)
+			arr, err := e.convertArrayValue(field, n.Value)
+			if err != nil {
+				return nil, err
+			}
 			return bson.M{field: bson.M{"$nin": arr}}, nil
 		default:
 			return nil, query.ErrInvalidQuery
@@ -398,27 +448,33 @@ func (e *Executor) buildFilter(node query.Node) (bson.M, error) {
 	}
 }
 
-// convertValue converts query values to MongoDB-compatible values
-func (e *Executor) convertValue(val interface{}) interface{} {
+// convertValue converts query values to MongoDB-compatible values and applies ValueConverter if configured
+func (e *Executor) convertValue(field string, val interface{}) (interface{}, error) {
+	// First convert to base type
+	var baseValue interface{}
 	switch v := val.(type) {
 	case query.StringValue:
 		// Try to convert to ObjectID if it looks like one
 		str := string(v)
 		if oid, err := primitive.ObjectIDFromHex(str); err == nil {
-			return oid
+			baseValue = oid
+		} else {
+			baseValue = str
 		}
-		return str
 	case query.IntValue:
-		return int64(v)
+		baseValue = int64(v)
 	case query.FloatValue:
-		return float64(v)
+		baseValue = float64(v)
 	case query.BoolValue:
-		return bool(v)
+		baseValue = bool(v)
 	case query.DateTimeValue:
-		return time.Time(v)
+		baseValue = time.Time(v)
 	default:
-		return val
+		baseValue = val
 	}
+
+	// Apply ValueConverter if configured
+	return e.options.ConvertValue(field, baseValue)
 }
 
 // getIDFieldName returns the ID field name to use, with fallback defaults
@@ -496,14 +552,18 @@ func hashID(id interface{}, seed int64) int64 {
 }
 
 // likeToRegex converts SQL LIKE pattern to MongoDB regex
-func (e *Executor) likeToRegex(value interface{}) string {
-	str := fmt.Sprintf("%v", e.convertValue(value))
+func (e *Executor) likeToRegex(field string, value interface{}) (string, error) {
+	converted, err := e.convertValue(field, value)
+	if err != nil {
+		return "", err
+	}
+	str := fmt.Sprintf("%v", converted)
 	// Escape regex special characters except % and _
 	str = escapeRegex(str)
 	// Convert SQL wildcards to regex
 	str = strings.ReplaceAll(str, "%", ".*")
 	str = strings.ReplaceAll(str, "_", ".")
-	return "^" + str + "$"
+	return "^" + str + "$", nil
 }
 
 // escapeRegex escapes regex special characters
@@ -519,16 +579,24 @@ func escapeRegex(s string) string {
 	return result
 }
 
-// convertArrayValue converts an array value to a slice for MongoDB
-func (e *Executor) convertArrayValue(val interface{}) []interface{} {
+// convertArrayValue converts an array value to a slice for MongoDB and applies ValueConverter if configured
+func (e *Executor) convertArrayValue(field string, val interface{}) ([]interface{}, error) {
 	if arrVal, ok := val.(query.ArrayValue); ok {
 		result := make([]interface{}, len(arrVal))
 		for i, v := range arrVal {
-			result[i] = e.convertValue(v)
+			converted, err := e.convertValue(field, v)
+			if err != nil {
+				return nil, err
+			}
+			result[i] = converted
 		}
-		return result
+		return result, nil
 	}
-	return []interface{}{e.convertValue(val)}
+	converted, err := e.convertValue(field, val)
+	if err != nil {
+		return nil, err
+	}
+	return []interface{}{converted}, nil
 }
 
 // Count returns the total number of items that would be returned by the given query

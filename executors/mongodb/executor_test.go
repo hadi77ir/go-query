@@ -156,7 +156,8 @@ func TestExecutor_ConvertValue(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := executor.convertValue(tt.value)
+			result, err := executor.convertValue("test_field", tt.value)
+			require.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -170,7 +171,8 @@ func TestExecutor_ConvertValue_ObjectID(t *testing.T) {
 	// Valid ObjectID
 	oid := primitive.NewObjectID()
 	value := query.StringValue(oid.Hex())
-	result := executor.convertValue(value)
+	result, err := executor.convertValue("_id", value)
+	require.NoError(t, err)
 
 	resultOID, ok := result.(primitive.ObjectID)
 	require.True(t, ok)
@@ -178,7 +180,8 @@ func TestExecutor_ConvertValue_ObjectID(t *testing.T) {
 
 	// Invalid ObjectID (should remain string)
 	value = query.StringValue("not-an-objectid")
-	result = executor.convertValue(value)
+	result, err = executor.convertValue("_id", value)
+	require.NoError(t, err)
 	assert.Equal(t, "not-an-objectid", result)
 }
 
