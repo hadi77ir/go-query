@@ -1,6 +1,6 @@
 module github.com/hadi77ir/go-query/executors/gorm
 
-go 1.24.0
+go 1.21
 
 require (
 	github.com/hadi77ir/go-query v1.4.0
